@@ -1,6 +1,6 @@
 /**
  * AI games — class scoreboard for LLM Arena and Agent Arena (v1 site) and, since v2, for
- * the warm-up, Be the LLM Arena and the final Be the LLM Arena (ai-games-v2 site). One sheet for both sites.
+ * the warm-up, Be the LLM Arena, the LLM final, Be the Agent Arena and the Agent Arena (ai-games-v2 site). One sheet for both sites.
  *
  * Paste this whole file into Extensions → Apps Script of a Google Sheet you own,
  * then Deploy → New deployment → Web app (Execute as: Me, Who has access: Anyone).
@@ -13,9 +13,9 @@
 var SHEET = "arena";
 var HEADERS = ["time", "classCode", "game", "runId", "nickname", "team", "stage", "stageName",
   "items", "correct", "points", "seconds", "hints"];
-var GAMES = ["llm", "agent", "warmup", "llm2", "llmfinal"];
-// How many stages each game has (v1: llm, agent; v2: warmup, llm2, llmfinal).
-var STAGES_BY_GAME = { llm: 6, agent: 6, warmup: 1, llm2: 7, llmfinal: 1 };
+var GAMES = ["llm", "agent", "warmup", "llm2", "llmfinal", "agent2", "agentfinal"];
+// How many stages each game has (v1: llm, agent; v2: warmup, llm2, llmfinal, agent2, agentfinal).
+var STAGES_BY_GAME = { llm: 6, agent: 6, warmup: 1, llm2: 7, llmfinal: 1, agent2: 7, agentfinal: 1 };
 function stages_(game) { return STAGES_BY_GAME[game] || 6; }
 var MAX_ITEM_POINTS = 225;   // 100 + 50 speed, x1.5 streak: the most one item can give
 
