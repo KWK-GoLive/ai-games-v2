@@ -1,4 +1,4 @@
-# AI games v2 (Part 1: language models)
+# AI games v2 (Part 1: language models · Part 2: AI agents)
 
 Browser games for complete beginners in the course "AI for Data Work". Plain HTML, CSS and JavaScript: no build step and no libraries. Made for phones, iPads and computers: everything is tap-only, tap targets are at least 40–44 px, and nothing scrolls sideways from 360 px up. It runs on GitHub Pages, and all the model work happens in the browser.
 
@@ -9,8 +9,35 @@ Browser games for complete beginners in the course "AI for Data Work". Plain HTM
 | 1 | Warm-up: **What comes next?** 8 questions on two 5-sentence texts | `warmup/` | `warmup` | 5–7 min |
 | 2 | **Be the LLM Arena**: 7 lessons, each followed by its timed stage. Part A = 1–4, Part B = 5–7 | `llm/` | `llm2` | 80–100 min (A about 45–55, B about 35–45) |
 | 3 | **Final: Be the LLM Arena**: one stage, 12 questions covering all 7 skills | `final/` | `llmfinal` | 15–20 min |
+| 4 | **Be the Agent Arena**: 7 lessons, each followed by its timed stage. Part A = 1–4, Part B = 5–7 | `agent/` | `agent2` | 80–100 min (A about 45–55, B about 35–45) |
+| 5 | **Agent Arena**: one task from Ploy, played in 12 timed steps | `agent-final/` | `agentfinal` | 15–20 min |
 
-Part 2 (AI agents) is frozen. The front page shows it as "Coming soon".
+## Part 2: Be the Agent (three linked chat phones)
+
+The student always plays the **model**. The screen shows three chat phones: **Human 📱** (Ploy, the café's shift manager), **Model 🤖** (the student) and **Apps 🧰** (the harness, one thread per app). Every message appears twice: on the right in the sender's phone and on the left in the receiver's phone, so the Model phone is exactly what the model sees (its context window). Wide screens show the three phones side by side; below 880 px one phone is shown at a time, with tabs and "new message" badges.
+
+The apps really run in the browser (`agent/js/tools.js`): a Calculator (arithmetic plus `SUM(col WHERE col = v)` on the sales CSV), File search (word matching over pieces of the café's PDF/Word files, labelled with page or section), Web search over a **made-up mini-web** (10 pages; only one quotes a real site, see Sources), and a File maker that builds real .xlsx, .docx and .csv files. No `eval` is used.
+
+| # | Lesson (untimed, practice with feedback) | Stage (timed, scored) |
+|---|---|---|
+| 1 | Tools: the three phones, then **4 real recorded Claude cases** (calculator, file search, web search, no tool) | Which app? (5, including "no app") |
+| 2 | File search: pieces, word matching, open before you answer, cite file and page | File search (4) |
+| 3 | Web search: titles and snippets, open a page, judge who wrote it and when | Web search (4) |
+| 4 | Calculator: write the sum, let the tool do it, check the result | Calculator (4) |
+| 5 | File maker: type, name, contents, preview; honest "done" | File maker (3, real downloads) |
+| 6 | Hidden orders (prompt injection): data is not orders; warn the human | Hidden orders (4) |
+| 7 | Permissions: do / ask first / don't | Permissions (6) |
+
+### The real recordings (lesson 1)
+
+`agent/data/raw/agent-runs-v2.json` holds four real runs of a Claude agent (model `claude-sonnet-5`, 28 Sep 2026 UTC) on the files in `agent/files/`. The lesson shows each run simply and also "the exact recorded steps". Every quoted line is checked to be in the raw record (`tests/check-agent-data.js`). What the recordings show, and what the lesson points out:
+
+- Case 1 (Latte total): the sum 8,580 came from a code tool. Its report also said "Cross-checked via qty×price too" (132 cups × 65 = 8,580), but no tool step in the log counted cups or did that check; the model may have done it without a tool (132 is right).
+- Case 2 (refund rule): the agent turned the PDF into text and answered from section 3.
+- Case 3 (VAT): the web search returned **titles and links only**; the agent never opened a page. It answered 7% and did 8,580 × 7% itself (600.60, which is right). Its claim "through at least September 2026" came from law-firm and news titles and **could not be verified** on the official Revenue Department site.
+- Case 4 (what CSV means): no tool.
+
+These are single runs; another run could behave differently.
 
 ## The main game: lesson → stage
 
@@ -31,11 +58,13 @@ Each lesson uses its own 4–6-sentence text, which is different from the stage 
 - `shared/model.js`: the toy n-gram model with back-off. Temperature: p ∝ count^(1/T).
 - `shared/arena.js`: the arena shell (sign-in, timer, scoring, resume codes, scoreboard queue). Added in v2: lessons (`stage.teach`), parts (`stage.part`) and badges (`stage.badge`).
 - `shared/tempviz.js`: the stacked bar, the pointer and the temperature calculator.
-- `shared/board.js`, `board.html`: the class scoreboard (Warm-up / Be the LLM Arena with All / Part A / Part B views / Final).
+- `shared/board.js`, `board.html`: the class scoreboard (Warm-up / Be the LLM Arena / LLM final / Be the Agent Arena / Agent Arena; the two main games have All / Part A / Part B views).
 - `llm/js/items.js`: all stage items and the final's 12 items. Keys come from the model.
 - `llm/js/lessons.js`: the 7 lessons.
 - `llm/js/draw.js`: how the items are drawn.
-- `apps-script/Code.gs`: the scoreboard web app. **One sheet serves both sites.** v2 added the game IDs `warmup`, `llm2` and `llmfinal`, and a stage count per game.
+- `apps-script/Code.gs`: the scoreboard web app. **One sheet serves both sites.** v2 added the game IDs `warmup`, `llm2`, `llmfinal`, `agent2` and `agentfinal`, and a stage count per game.
+- `agent/`: Be the Agent Arena. `data/cafe.js` (the café's files as text, the mini-web), `data/raw.js` (the recordings), `js/tools.js` (the apps), `js/phones.js` (the 3 phones), `js/items.js` (stage items), `js/draw.js`, `js/lessons.js`, `js/stages.js`, `js/arena.js` (the Agent Arena's 12 steps). `files/`: the real files students can download.
+- `agent-final/`: the Agent Arena page.
 - `config.js`: `SCOREBOARD_URL`, `BOARD_REFRESH_SECONDS`, `TIME_FACTOR` (1.5 = 50% more time).
 
 ## Tests
@@ -44,7 +73,9 @@ Each lesson uses its own 4–6-sentence text, which is different from the stage 
 node tests/check-data.js        # every answer key recomputed by a separate counting model (150 seeds), lesson facts, sources
 node tests/check-backend.js     # scoreboard logic, including the v2 game IDs
 python3 tests/playthrough.py    # the whole site in Chromium: every lesson and stage, resume on a 2nd device, board, widths 360-1366 px
-python3 tests/touch.py          # emulated iPhone 13 and iPad: tapping through a lesson, 40 px+ tap targets, the calculator by touch
+python3 tests/touch.py          # emulated iPhone 13 and iPad: tapping through LLM and Agent lesson 1, 40 px+ tap targets, the calculator by touch
+node tests/check-agent-data.js  # agent: files = game texts, recording quotes, sales totals recomputed, every stage/arena key over 120 seeds
+python3 tests/agent-play.py     # agent: all lessons, stages and the Agent Arena by clicking, 3-phone rule, downloads, at 390 and 1100 px
 ```
 
 ## Scoreboard
@@ -55,3 +86,4 @@ These steps are the same as in v1. Paste `apps-script/Code.gs` into the Apps Scr
 
 - Brown, T. B., et al. (2020). *Language Models are Few-Shot Learners*. NeurIPS 2020, section 2.1: "All models use a context window of n_ctx = 2048 tokens."
 - Anthropic, *Context windows* (Claude Platform Docs), https://platform.claude.com/docs/en/build-with-claude/context-windows, accessed 28 Sep 2026. It lists Claude Sonnet 5 among the models with a 1M-token context window.
+- Thailand Revenue Department, *Value Added Tax (VAT)* (https://www.rd.go.th/english/6043.html), accessed 28 Sep 2026: "Currently, the rate is 7 percent." This is the only real page in the Agent game's mini-web; the other nine pages are made up (their sites end in `.example`).
