@@ -121,7 +121,7 @@ with sync_playwright() as p:
     page.goto(BASE + "/index.html")
     page.fill("#p-nick", "Ann"); page.fill("#p-team", "Red"); page.fill("#p-class", "t1"); page.click("#signin-body button[type=submit]")
     check("Playing as Ann" in page.locator("#signin-body").inner_text(), "front-page sign-in saved")
-    check(page.locator("#games a.game").count() == 3 and page.locator(".games.soon a").count() == 0 and page.locator(".games.soon .game").count() == 3, "3 LLM games linked, 3 agent cards not links (coming soon)")
+    check(page.locator("#games a.game").count() == 5, "5 games linked (3 LLM, 2 agent)")
     check(page.locator("#games a.game .right.go").count() == 1, "first game marked 'Play'")
     # ---------- warm-up ----------
     page.goto(BASE + "/warmup/index.html?test=1")
@@ -209,11 +209,14 @@ with sync_playwright() as p:
     check(len(rows) == 1 and "Ann" in rows[0], "Part B view lists only players with Part B stages")
     page.locator("button:has-text('Part A')").click(); page.wait_for_timeout(200)
     check("part=A" in page.url and page.locator("table.board").first.locator("thead th").count() == 2 + 4 + 1, "Part A view: 4 stage columns + part points, URL keeps the part")
-    for tab, cols in (("Warm-up", 2 + 1 + 3), ("Final arena", 2 + 1 + 3)):
-        page.locator(".tabs button", has_text=tab).click(); page.wait_for_timeout(900)
+    for g_, st_ in (("agent2", 1), ("agent2", 5), ("agentfinal", 1)):
+        urllib.request.urlopen(MOCK_URL + "?" + urllib.parse.urlencode({"action": "post", "payload": json.dumps({"game": g_, "classCode": "T1", "nickname": "Bo", "runId": "BOBO-AGNT" if g_ == "agent2" else "BOBO-AGFN", "stage": st_, "stageName": "x", "items": 4, "correct": 4, "points": 400, "seconds": 40, "hints": 0})})).read()
+    page.locator("button:has-text('All 7 stages')").click(); page.wait_for_timeout(200)
+    for tab, cols in (("Warm-up", 2 + 1 + 3), ("LLM final", 2 + 1 + 3), ("Be the Agent Arena", 2 + 7 + 3), ("Agent Arena", 2 + 1 + 3)):
+        page.get_by_role("tab", name=tab, exact=True).click(); page.wait_for_timeout(900)
         check(page.locator("table.board").first.locator("thead th").count() == cols, f"board tab {tab}")
     for w in (360, 390, 768, 1024, 1366):
-        for url in ("/index.html", "/board.html?class=T1", "/llm/index.html", "/warmup/index.html", "/final/index.html"):
+        for url in ("/index.html", "/board.html?class=T1", "/llm/index.html", "/warmup/index.html", "/final/index.html", "/agent/index.html", "/agent-final/index.html"):
             page.set_viewport_size({"width": w, "height": 800}); page.goto(BASE + url); page.wait_for_timeout(250)
             no_hscroll(page, f"{url} at {w}px")
 

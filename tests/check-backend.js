@@ -88,5 +88,10 @@ post({ game: "llm", nickname: "Old", runId: "o1", stage: 1, points: 50 });
 check(S.doGet({ action: "board", game: "llm", classCode: "SEC1" }).players[0].perStage.length === 6, "v1 board keeps 6 columns");
 check(S.doGet({ action: "check", game: "llm2", classCode: "sec1", nickname: "Vi", runId: "zz" }).taken === true && S.doGet({ action: "check", game: "llmfinal", classCode: "sec1", nickname: "Vi", runId: "f1" }).taken === false, "nicknames per game (v2)");
 
+check(post({ game: "agent2", nickname: "Ag", runId: "g1", stage: 7, points: 100 }).ok && post({ game: "agent2", nickname: "Ag", runId: "g1", stage: 8 }).fatal === true, "agent2 has 7 stages");
+check(post({ game: "agentfinal", nickname: "Ag", runId: "g2", stage: 1, items: 12, points: 900 }).ok && post({ game: "agentfinal", nickname: "Ag", runId: "g2", stage: 2 }).fatal === true, "agentfinal has 1 stage");
+check(S.doGet({ action: "board", game: "agent2", classCode: "SEC1" }).players[0].perStage.length === 7, "agent2 board has 7 columns");
+check(S.doGet({ action: "board", game: "agent", classCode: "SEC1" }).players.length === 0, "v2 agent rows don't show on the v1 Agent board");
+
 console.log(fails ? fails + " check(s) FAILED" : "All backend checks passed");
 process.exit(fails ? 1 : 0);

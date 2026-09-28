@@ -65,6 +65,36 @@ with sync_playwright() as p:
         check("100%" in tp.locator("#calcTest .tv-legend").inner_text() and tp.locator("#calcTest button:has-text('Spin')").is_disabled(), f"{dev}: tapping the slider's left end sets temperature 0")
         no_hscroll(tp, f"{dev}: calculator")
         shot(tp, dev.replace(" ", "_").replace("(", "").replace(")", "") + "-calculator")
+        # ---------- Be the Agent: lesson 1 replays and the 3 phones by tapping ----------
+        tp.goto(BASE + "/agent/index.html?test=1", wait_until="domcontentloaded"); tp.wait_for_timeout(300)
+        if tp.locator("#nick").is_visible(): tp.fill("#nick", "Tap2")
+        tp.locator("button:has-text('Start my run'):visible").first.tap(); tp.wait_for_timeout(300)
+        for i in range(6):
+            while tp.locator("button:has-text('Next message'):not([disabled])").count():
+                tp.locator("button:has-text('Next message'):not([disabled])").first.tap(); tp.wait_for_timeout(40)
+            no_hscroll(tp, f"{dev}: agent lesson 1 step {i+1}")
+            small = tp.evaluate("""[...document.querySelectorAll('main button, main .choice, main input')].filter(e => e.offsetParent && e.getBoundingClientRect().height < 40).map(e => e.textContent.trim().slice(0, 20))""")
+            check(not small, f"{dev}: agent lesson 1 step {i+1}: every tap target is at least 40px tall ({small})")
+            if i == 1:
+                tabs = tp.locator(".ph-tabs").first
+                if tabs.is_visible():  # phone: one phone at a time, with tabs
+                    tabs.locator("button:has-text('Ploy')").tap(); tp.wait_for_timeout(60)
+                    check(tp.locator(".phones").first.locator(".ph-human.on").is_visible(), f"{dev}: tapping the Ploy tab shows the Human phone")
+                else:
+                    check(tp.locator(".phones").first.locator(".ph-apps").is_visible(), f"{dev}: 3 phones side by side")
+                shot(tp, dev.replace(" ", "_").replace("(", "").replace(")", "") + "-agent-lesson1")
+            if tp.locator(".move").count() and not tp.locator(".feedback.good").count():
+                it = tp.evaluate("(() => { const it = window.AGENT_LAST_ITEM; return { kind: it.kind, key: it.key }; })()")
+                check(it["kind"] == "toolpick", f"{dev}: lesson 1 practice is a Which-app item")
+                tp.locator(f'.move >> nth=0 >> .choice[data-value="{it["key"]["tool"]}"]').first.tap(); tp.wait_for_timeout(80)
+                tp.locator(f'.move >> nth=1 >> .choice[data-value="{it["key"]["reply"]}"]').first.tap(); tp.wait_for_timeout(80)
+                check(tp.locator(".feedback.good").count() == 1, f"{dev}: lesson 1 practice solved by tapping")
+                no_hscroll(tp, f"{dev}: agent lesson 1 practice")
+            nxt = tp.locator("button:has-text('Next →'), button:has-text('Start stage')").first
+            if not nxt.count(): break
+            t = nxt.inner_text(); nxt.tap(); tp.wait_for_timeout(120)
+            if "Start stage" in t: break
+        check(tp.locator("button:has-text('Start stage')").count() == 1 or tp.locator(".kicker", has_text="Stage 1 of 7").count() == 1, f"{dev}: agent lesson 1 finished by tapping")
         check(not tp.errors, f"{dev}: no page errors: " + "; ".join(tp.errors[:3]))
         tctx.close()
     br.close()
