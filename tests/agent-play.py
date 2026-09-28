@@ -122,7 +122,7 @@ def play(ctx, label, W, per_item=None):
     check(pg.locator(".big-points").count() == 1, f"@{label} results screen")
     # ---------- Agent Arena ----------
     pg.goto(BASE + "/agent-final/index.html?test=1"); pg.wait_for_timeout(300)
-    pg.click("button:has-text('Start my run')"); pg.wait_for_timeout(200); pg.click("button:has-text('Start stage')"); pg.wait_for_timeout(150)
+    pg.locator("button:has-text('Start my run'):visible").first.click(); pg.wait_for_timeout(300); pg.click("button:has-text('Start stage')"); pg.wait_for_timeout(150)
     for sidx in range(12):
         st = pg.evaluate("(() => { const s = window.AGENT_STEP; return { kind: s.kind, key: s.key, solution: s.solution, id: s.id }; })()")
         m = pg.locator(".move").last

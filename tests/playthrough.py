@@ -220,6 +220,10 @@ with sync_playwright() as p:
             page.set_viewport_size({"width": w, "height": 800}); page.goto(BASE + url); page.wait_for_timeout(250)
             no_hscroll(page, f"{url} at {w}px")
 
+    # live positions were sent while playing (the LLM games use the same arena code as Be the Agent)
+    live = json.loads(urllib.request.urlopen(f"http://127.0.0.1:{MOCK}/__live").read())
+    games = sorted(set(k.split("|")[1] for k in live))
+    check("llm2" in games and "llmfinal" in games, f"live positions sent for the LLM games ({games})")
     for pg in (page, page2):
         check(not pg.errors, "no page errors: " + "; ".join(pg.errors[:5]))
     br.close()

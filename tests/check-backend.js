@@ -93,5 +93,43 @@ check(post({ game: "agentfinal", nickname: "Ag", runId: "g2", stage: 1, items: 1
 check(S.doGet({ action: "board", game: "agent2", classCode: "SEC1" }).players[0].perStage.length === 7, "agent2 board has 7 columns");
 check(S.doGet({ action: "board", game: "agent", classCode: "SEC1" }).players.length === 0, "v2 agent rows don't show on the v1 Agent board");
 
+
+/* ---------- live progress (every item and lesson) and the all-in-one teacher call ---------- */
+S.reset();
+function prog(o) { return S.doGet({ action: "progress", payload: JSON.stringify(Object.assign({ game: "agent2", classCode: "p1", items: 5, phase: "item" }, o)) }); }
+post({ game: "agent2", classCode: "P1", nickname: "Lia", runId: "L1", stage: 0, items: 0, points: 0, team: "Green" });
+post({ game: "agent2", classCode: "P1", nickname: "Max", runId: "M1", stage: 0, items: 0, points: 0 });
+check(prog({ nickname: "Lia", runId: "L1", stage: 1, phase: "lesson", item: 0, points: 0 }).ok, "progress: lesson position saved");
+var bl = S.doGet({ action: "board", game: "agent2", classCode: "P1" });
+var lia = bl.players.filter(function (p) { return p.nickname === "Lia"; })[0];
+check(lia.live && lia.live.phase === "lesson" && lia.live.stage === 1 && lia.livePoints === 0, "board shows Lia in lesson 1");
+prog({ nickname: "Lia", runId: "L1", stage: 1, item: 2, points: 280, correct: 2 });
+prog({ nickname: "Max", runId: "M1", stage: 1, item: 1, points: 150, correct: 1 });
+check(Object.keys(S.live()).length === 2 && S.rows().length === 3, "one live entry per run (in the cache, updated in place); no extra sheet rows");
+check(prog({ nickname: "Lia", runId: "L1", stage: 1, item: 1, points: 100 }).stale === true, "an older position doesn't overwrite a newer one");
+check(prog({ nickname: "Lia", runId: "L1", stage: 1, phase: "lesson", item: 0 }).ok && !prog({ nickname: "Lia", runId: "L1", stage: 1, phase: "lesson", item: 0 }).stale, "the start of the SAME stage resets the position (a run resumed on another computer restarts the stage)");
+prog({ nickname: "Lia", runId: "L1", stage: 1, item: 2, points: 280, correct: 2 });
+bl = S.doGet({ action: "board", game: "agent2", classCode: "P1" });
+check(bl.players[0].nickname === "Lia" && bl.players[0].livePoints === 280 && bl.players[0].points === 0 && bl.players[0].live.item === 2, "ranked by live points: Lia 280 (2 of 5 answered) before Max 150");
+check(bl.teams.length === 1 && bl.teams[0].average === 280, "team average uses live points");
+post({ game: "agent2", classCode: "P1", nickname: "Lia", runId: "L1", stage: 1, items: 5, correct: 4, points: 600 });
+bl = S.doGet({ action: "board", game: "agent2", classCode: "P1" });
+lia = bl.players.filter(function (p) { return p.nickname === "Lia"; })[0];
+check(lia.live === null && lia.livePoints === 600 && lia.perStage[0] === 600, "finished stage row replaces the live position (no double count)");
+prog({ nickname: "Lia", runId: "L1", stage: 2, phase: "lesson", item: 0 });
+prog({ nickname: "Lia", runId: "L1", stage: 2, item: 1, points: 120, correct: 1 });
+lia = S.doGet({ action: "board", game: "agent2", classCode: "P1" }).players.filter(function (p) { return p.nickname === "Lia"; })[0];
+check(lia.live.stage === 2 && lia.livePoints === 720, "stage 2 in progress: 600 + 120 live");
+check(prog({ nickname: "Lia", runId: "L1", stage: 9, item: 0 }).fatal === true && prog({ nickname: "", runId: "x", stage: 1 }).fatal === true, "bad progress refused as fatal");
+check(prog({ nickname: "Lia", runId: "L1", stage: 2, item: 3, points: 99999 }).ok && S.doGet({ action: "board", game: "agent2", classCode: "P1" }).players[0].live.points === 1125, "live points capped at items x 225");
+// a second run under a taken nickname: its progress is ignored
+prog({ nickname: "lia", runId: "L2", stage: 3, item: 4, points: 900 });
+check(S.doGet({ action: "board", game: "agent2", classCode: "P1" }).players.filter(function (p) { return p.nickname.toLowerCase() === "lia"; }).length === 1 && S.doGet({ action: "board", game: "agent2", classCode: "P1" }).players[0].live.stage === 2, "progress of a not-counted run is ignored");
+// progress in another class/game doesn't leak
+prog({ nickname: "Lia", runId: "L1", stage: 1, item: 4, points: 500, classCode: "P2" });
+check(S.doGet({ action: "board", game: "agent2", classCode: "P1" }).players[0].live.stage === 2, "other class's progress not mixed in");
+var all4 = S.doGet({ action: "boards", games: "llm2,llmfinal,agent2,agentfinal,chess", classCode: "p1" });
+check(all4.ok && Object.keys(all4.boards).join() === "llm2,llmfinal,agent2,agentfinal" && all4.boards.agent2.players.length === 2 && all4.boards.llm2.players.length === 0, "one call returns the 4 boards (unknown game dropped)");
+check(!S.doGet({ action: "boards", games: "chess", classCode: "p1" }).ok, "boards: needs a known game");
 console.log(fails ? fails + " check(s) FAILED" : "All backend checks passed");
 process.exit(fails ? 1 : 0);
