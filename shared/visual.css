@@ -258,3 +258,51 @@ button, .choice, .tile, .tv-slider, summary { touch-action: manipulation; }   /*
   .tv-seg { font-size: .78rem; }
   .ltext { padding: 8px 10px; font-size: .92rem; }
 }
+
+/* ---------- v2 agent: three linked chat phones ---------- */
+.phones { display: grid; gap: 8px; }
+.ph-tabs { display: none; gap: 6px; }
+.ph-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; align-items: stretch; }
+.phone { display: flex; flex-direction: column; border: 2px solid var(--line); border-radius: 22px; background: var(--surface); overflow: hidden; min-height: 340px; box-shadow: var(--shadow); }
+.ph-head { display: flex; align-items: center; gap: 6px; padding: 8px 12px; background: var(--surface-2); border-bottom: 1px solid var(--line); font-size: .92rem; }
+.ph-model .ph-head { background: var(--accent-soft); }
+.ph-ico { font-size: 1.1rem; }
+.ph-apps { display: flex; flex-wrap: wrap; gap: 4px; padding: 6px 8px; border-bottom: 1px solid var(--line); }
+.ph-app { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 4px 10px; font-size: .78rem; font-weight: 600; cursor: pointer; min-height: 32px; position: relative; }
+.ph-app[aria-pressed="true"] { background: var(--ink); color: #fff; border-color: var(--ink); }
+.ph-body { flex: 1; padding: 10px 8px; display: flex; flex-direction: column; gap: 6px; overflow-y: auto; max-height: 460px; }
+.ph-thread { display: flex; flex-direction: column; gap: 6px; }
+.ph-empty, .ph-note { font-size: .78rem; color: var(--ink-3); text-align: center; margin: 4px 0; }
+.ph-note { background: var(--surface-2); border-radius: 8px; padding: 4px 8px; }
+.b { max-width: 88%; padding: 7px 10px; border-radius: 14px; font-size: .9rem; line-height: 1.35; overflow-wrap: anywhere; white-space: pre-wrap; }
+.b.left { align-self: flex-start; border-bottom-left-radius: 4px; background: var(--surface-2); }
+.b.right { align-self: flex-end; border-bottom-right-radius: 4px; background: var(--accent); color: #fff; }
+.b.right.c-app { background: #6b5b3e; }
+.b.right.c-human { background: #1d7a46; }
+.b.left.c-app { background: #f5ecd9; }
+.b.left.c-human { background: #e3f3ea; }
+.b-from { font-size: .7rem; font-weight: 700; opacity: .8; margin-bottom: 2px; }
+.b .ph-code { font-family: var(--mono); font-size: .8rem; white-space: pre-wrap; background: none; color: inherit; }
+.b.new { animation: ph-pop .5s ease both; }
+@keyframes ph-pop { from { transform: scale(.92); opacity: 0; } to { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .b.new { animation: none; } }
+.ph-badge { display: inline-block; min-width: 1.3em; margin-left: 5px; padding: 0 5px; border-radius: 999px; background: #d4380d; color: #fff; font-size: .72rem; font-weight: 700; text-align: center; }
+.ph-say { min-height: 1.4em; margin: 6px 0 0; font-weight: 600; }
+.ph-ctl { margin-top: 4px; }
+.b table { border-collapse: collapse; font-size: .75rem; }
+.b td, .b th { border: 1px solid rgba(0,0,0,.15); padding: 1px 5px; }
+.b .ph-hit { display: block; border-top: 1px dashed rgba(0,0,0,.2); padding-top: 3px; margin-top: 3px; }
+@media (max-width: 880px) {
+  .ph-tabs { display: flex; flex-wrap: wrap; }
+  .ph-tab { flex: 1; min-height: 44px; border: 2px solid var(--line); background: var(--surface); border-radius: 12px; font-weight: 700; cursor: pointer; padding: 4px 6px; font-size: .85rem; }
+  .ph-tab[aria-selected="true"] { border-color: var(--accent); background: var(--accent-soft); }
+  .ph-grid { grid-template-columns: 1fr; }
+  .phone { display: none; min-height: 300px; }
+  .phone.on { display: flex; }
+  .ph-body { max-height: 380px; }
+}
+@media (pointer: coarse) { .ph-app { min-height: 40px; } }
+/* the student's move (as the model), under the phones */
+.move { border: 2px solid var(--accent); border-radius: 14px; padding: 12px; background: var(--surface); }
+.move h3 { margin: 0 0 6px; font-size: 1rem; }
+.move .kicker { margin-bottom: 4px; }

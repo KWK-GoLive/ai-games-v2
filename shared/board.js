@@ -1,7 +1,7 @@
 /*
- * AI games v2 — the class scoreboard (board.html). Three tabs: Warm-up, Be the LLM Arena (with Part A / Part B views)
- * and the final arena. Reads the Google Sheet through the Apps Script web app; refreshes every few seconds.
- * URL options: ?class=SEC1  &game=warmup|llm2|llmfinal  &part=A|B  &projector=1 (big text)
+ * AI games v2 — the class scoreboard (board.html). Tabs: Warm-up, Be the LLM Arena and Be the Agent Arena (each with
+ * Part A / Part B views), and the two finals. Reads the Google Sheet through the Apps Script web app; refreshes every few seconds.
+ * URL options: ?class=SEC1  &game=warmup|llm2|llmfinal|agent2|agentfinal  &part=A|B  &projector=1 (big text)
  */
 (function () {
   "use strict";
@@ -10,7 +10,8 @@
   var app = document.getElementById("app");
   var updated = document.getElementById("updated");
   var params = new URLSearchParams(location.search);
-  var GAMES = [{ id: "warmup", name: "Warm-up" }, { id: "llm2", name: "Be the LLM Arena" }, { id: "llmfinal", name: "Final arena" }];
+  var GAMES = [{ id: "warmup", name: "Warm-up" }, { id: "llm2", name: "Be the LLM Arena" }, { id: "llmfinal", name: "LLM final" }, { id: "agent2", name: "Be the Agent Arena" }, { id: "agentfinal", name: "Agent Arena" }];
+  var HAS_PARTS = { llm2: true, agent2: true };
   var game = GAMES.some(function (g) { return g.id === params.get("game"); }) ? params.get("game") : "llm2";
   var PARTS = { A: [0, 1, 2, 3], B: [4, 5, 6] };   // Be the LLM Arena: stages 1-4 and 5-7
   var part = PARTS[params.get("part")] ? params.get("part") : "all";
@@ -19,7 +20,9 @@
   var STAGE_NAMES = {
     warmup: ["What comes next?"],
     llm2: ["Count it", "Greedy writer", "Temperature", "Keyhole", "Two-word boss", "Chat brain", "Three-word boss"],
-    llmfinal: ["All skills"]
+    llmfinal: ["All skills"],
+    agent2: ["Which app?", "File search", "Web search", "Calculator", "File maker", "Hidden orders", "Permissions"],
+    agentfinal: ["Ploy's memo"]
   };
   if (params.get("projector") === "1") document.documentElement.classList.add("projector");
 
@@ -35,12 +38,12 @@
   var tabs = h("div", { class: "tabs", role: "tablist" });
   var tabBtns = GAMES.map(function (g) {
     var b = h("button", { type: "button", role: "tab", "aria-selected": String(g.id === game), "data-game": g.id, text: g.name });
-    b.addEventListener("click", function () { game = g.id; tabBtns.forEach(function (x) { x.setAttribute("aria-selected", String(x === b)); }); partRow.classList.toggle("hidden", game !== "llm2"); syncUrl(); load(true); });
+    b.addEventListener("click", function () { game = g.id; tabBtns.forEach(function (x) { x.setAttribute("aria-selected", String(x === b)); }); partRow.classList.toggle("hidden", !HAS_PARTS[game]); syncUrl(); load(true); });
     tabs.appendChild(b);
     return b;
   });
   var csvBtn = h("button", { class: "btn", type: "button", text: "Download results (CSV)" });
-  var partRow = h("div", { class: "tabs toggle" + (game === "llm2" ? "" : " hidden"), role: "group", "aria-label": "which part" });
+  var partRow = h("div", { class: "tabs toggle" + (HAS_PARTS[game] ? "" : " hidden"), role: "group", "aria-label": "which part" });
   [["all", "All 7 stages"], ["A", "Part A (1\u20134)"], ["B", "Part B (5\u20137)"]].forEach(function (pp) {
     var b = h("button", { type: "button", "aria-pressed": String(part === pp[0]), text: pp[1] });
     b.addEventListener("click", function () { part = pp[0]; Array.prototype.forEach.call(partRow.children, function (x) { x.setAttribute("aria-pressed", String(x === b)); }); syncUrl(); if (last) render(last); });
@@ -65,7 +68,7 @@
 
   function syncUrl() {
     var q = new URLSearchParams(location.search);
-    q.set("game", game); if (game === "llm2" && part !== "all") q.set("part", part); else q.delete("part"); if (classCode) q.set("class", classCode); else q.delete("class");
+    q.set("game", game); if (HAS_PARTS[game] && part !== "all") q.set("part", part); else q.delete("part"); if (classCode) q.set("class", classCode); else q.delete("class");
     try { history.replaceState(null, "", "?" + q.toString()); } catch (e) { /* file:// */ }
   }
 
@@ -88,7 +91,7 @@
   function render(r0) {
     clear(body);
     var allNames = STAGE_NAMES[game];
-    var idx = game === "llm2" && part !== "all" ? PARTS[part] : allNames.map(function (n, i) { return i; });
+    var idx = HAS_PARTS[game] && part !== "all" ? PARTS[part] : allNames.map(function (n, i) { return i; });
     var partView = idx.length !== allNames.length;
     var names = idx.map(function (i) { return allNames[i]; });
     // In a Part view, rank by that part's points only (right answers per stage aren't sent separately, so no "Right" column).
