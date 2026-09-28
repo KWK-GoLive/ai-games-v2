@@ -6,8 +6,11 @@
  * then Deploy → New deployment → Web app (Execute as: Me, Who has access: Anyone).
  * See README.md, "Scoreboard".
  *
- * The games send one row per finished stage. Nothing but a nickname, optional team,
- * class code and the stage results is stored. Only a player's FIRST run counts on the board.
+ * The games send one row per finished stage (sheet "arena"). Since v2 the arenas also send their live position
+ * when a lesson opens and after every answered item, so the teacher's board moves during a stage. Live positions
+ * are kept in the script cache (CacheService, up to 6 hours), not in the sheet: no sheet write and no lock per item,
+ * and nothing to clean up. The finished-stage rows stay the permanent record. Nothing but a nickname, optional team,
+ * class code and the results is stored. Only a player's FIRST run counts on the board.
  */
 
 var SHEET = "arena";
@@ -16,6 +19,7 @@ var HEADERS = ["time", "classCode", "game", "runId", "nickname", "team", "stage"
 var GAMES = ["llm", "agent", "warmup", "llm2", "llmfinal", "agent2", "agentfinal"];
 // How many stages each game has (v1: llm, agent; v2: warmup, llm2, llmfinal, agent2, agentfinal).
 var STAGES_BY_GAME = { llm: 6, agent: 6, warmup: 1, llm2: 7, llmfinal: 1, agent2: 7, agentfinal: 1 };
+var LIVE_TTL = 21600;   // seconds a live position is kept (6 h, CacheService's maximum)
 function stages_(game) { return STAGES_BY_GAME[game] || 6; }
 var MAX_ITEM_POINTS = 225;   // 100 + 50 speed, x1.5 streak: the most one item can give
 
@@ -85,14 +89,46 @@ function countedRuns_(rows) {
   return first;
 }
 
-function board_(game, classCode) {
-  var rows = readRows_().filter(function (r) { return r.game === game && r.classCode === classCode; });
+/* ---------- live positions (CacheService) ---------- */
+function liveKey_(game, classCode, runId) { return "live|" + game + "|" + classCode + "|" + runId; }
+function posOf_(stage, phase, item) { return stage * 100 + (phase === "lesson" ? 0 : item + 1); }
+
+/* Save a player's live position. An older position never replaces a newer one, except the START of the same stage
+ * (its lesson or item 0): that happens when a run is resumed on another computer and the stage starts again. */
+function progress_(d) {
+  var game = cleanGame_(d.game), classCode = cleanClass_(d.classCode), nick = cleanNick_(d.nickname), runId = clean_(d.runId, 40);
+  var stage = Number(d.stage), phase = d.phase === "lesson" ? "lesson" : "item", items = num_(d.items, 0, 50), item = num_(d.item, 0, items);
+  if (!game || !classCode || !nick || !runId || !(stage >= 1 && stage <= stages_(game) && stage === Math.floor(stage)))
+    return { ok: false, fatal: true, error: "missing or invalid fields" };
+  var cache = CacheService.getScriptCache(), key = liveKey_(game, classCode, runId);
+  var old = null;
+  try { old = JSON.parse(cache.get(key) || "null"); } catch (e) { old = null; }
+  var pos = posOf_(stage, phase, item);
+  if (old && pos < posOf_(old.stage, old.phase, old.item) && !(stage === old.stage && (phase === "lesson" || item === 0)))
+    return { ok: true, stale: true };
+  cache.put(key, JSON.stringify({ stage: stage, phase: phase, item: item, items: items, points: num_(d.points, 0, items * MAX_ITEM_POINTS),
+    correct: num_(d.correct, 0, items), time: Date.now() }), LIVE_TTL);
+  return { ok: true };
+}
+/* the live positions of these runs: { runId: {...} } */
+function readLive_(game, classCode, runIds) {
+  var out = {}, cache = CacheService.getScriptCache();
+  for (var i = 0; i < runIds.length; i += 100) {   // in chunks, to stay well inside any batch limit
+    var chunk = runIds.slice(i, i + 100);
+    var got = cache.getAll(chunk.map(function (r) { return liveKey_(game, classCode, r); })) || {};
+    chunk.forEach(function (r) { var v = got[liveKey_(game, classCode, r)]; if (v) { try { out[r] = JSON.parse(v); } catch (e) { /* ignore */ } } });
+  }
+  return out;
+}
+
+function board_(game, classCode, allRows) {
+  var rows = (allRows || readRows_()).filter(function (r) { return r.game === game && r.classCode === classCode; });
   var first = countedRuns_(rows);
   var players = {};
   rows.forEach(function (r) {
     var k = r.nickname.toLowerCase();
     if (first[k].runId !== r.runId) return; // a later run under the same nickname: ignored
-    var p = players[k] || (players[k] = { nickname: r.nickname, team: r.team, stages: {}, points: 0, correct: 0, items: 0, seconds: 0, hints: 0 });
+    var p = players[k] || (players[k] = { nickname: r.nickname, team: r.team, runId: r.runId, stages: {}, points: 0, correct: 0, items: 0, seconds: 0, hints: 0 });
     if (r.stage < 1) { if (r.team) p.team = r.team; return; } // stage 0 = "joined" (nickname claimed at sign-in)
     if (p.stages[r.stage] != null) return; // duplicate send of the same stage
     p.stages[r.stage] = Number(r.points);
@@ -100,20 +136,26 @@ function board_(game, classCode) {
     p.seconds += Number(r.seconds); p.hints += Number(r.hints);
     if (r.team) p.team = r.team;
   });
+  var live = readLive_(game, classCode, Object.keys(players).map(function (k) { return players[k].runId; }));
   var list = Object.keys(players).map(function (k) {
     var p = players[k];
     var per = [];
     for (var s = 1; s <= stages_(game); s++) per.push(p.stages[s] == null ? null : p.stages[s]);
+    // the live position counts only for a stage that isn't finished yet (a finished stage's row replaces it)
+    var lv = live[p.runId], cur = lv && p.stages[lv.stage] == null ? lv : null;
     return { nickname: p.nickname, team: p.team, perStage: per, done: Object.keys(p.stages).length,
-      points: p.points, correct: p.correct, items: p.items, seconds: p.seconds, hints: p.hints };
+      points: p.points, correct: p.correct, items: p.items, seconds: p.seconds, hints: p.hints,
+      live: cur ? { stage: cur.stage, phase: cur.phase, item: cur.item, items: cur.items, points: cur.points, correct: cur.correct, time: cur.time } : null,
+      livePoints: p.points + (cur ? cur.points : 0) };
   });
-  list.sort(function (a, b) { return b.points - a.points || b.correct - a.correct || a.seconds - b.seconds || (a.nickname < b.nickname ? -1 : 1); });
+  // ranked by live points: finished stages + the items already answered in the current stage
+  list.sort(function (a, b) { return b.livePoints - a.livePoints || b.correct - a.correct || a.seconds - b.seconds || (a.nickname < b.nickname ? -1 : 1); });
   var teams = {};
   list.forEach(function (p) {
-    if (!p.team || !p.done) return; // players who have only joined don't pull their team down
+    if (!p.team || (!p.done && !p.livePoints)) return; // players who have only joined don't pull their team down
     var k = p.team.toLowerCase();
     var t = teams[k] || (teams[k] = { team: p.team, members: 0, total: 0 });
-    t.members++; t.total += p.points;
+    t.members++; t.total += p.livePoints;
   });
   var tlist = Object.keys(teams).map(function (k) { var t = teams[k]; return { team: t.team, members: t.members, average: Math.round(t.total / t.members) }; });
   tlist.sort(function (a, b) { return b.average - a.average || b.members - a.members; });
@@ -162,11 +204,20 @@ function doGet(e) {
     // The games send results as a GET (action=post&payload=...): a browser POST to Apps Script is redirected,
     // and some browsers then lose the reply. The payload is the same JSON doPost takes.
     if (action === "post") return doPost({ postData: { contents: String(p.payload || "{}") } });
+    if (action === "progress") return json_(progress_(JSON.parse(String(p.payload || "{}"))));
     if (!classCode) return json_({ ok: false, error: "class code needed" });
     if (action === "board") {
       var game = cleanGame_(p.game);
       if (!game) return json_({ ok: false, error: "unknown game" });
       return json_(board_(game, classCode));
+    }
+    if (action === "boards") {
+      // several boards in one call (the teacher's all-in-one window): the sheets are read once
+      var list = String(p.games || "").split(",").map(cleanGame_).filter(function (g, i, a) { return g && a.indexOf(g) === i; }).slice(0, 7);
+      if (!list.length) return json_({ ok: false, error: "unknown game" });
+      var all = readRows_(), out = {};
+      list.forEach(function (g) { out[g] = board_(g, classCode, all); });
+      return json_({ ok: true, classCode: classCode, boards: out, updated: Date.now() });
     }
     if (action === "check") {
       // Is this nickname already used by a different run in this class and game?
