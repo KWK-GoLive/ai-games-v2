@@ -81,7 +81,8 @@ with sync_playwright() as p:
                     tabs.locator("button:has-text('Ploy')").tap(); tp.wait_for_timeout(60)
                     check(tp.locator(".phones").first.locator(".ph-human.on").is_visible(), f"{dev}: tapping the Ploy tab shows the Human phone")
                 else:
-                    check(tp.locator(".phones").first.locator(".ph-apps").is_visible(), f"{dev}: 3 phones side by side")
+                    check(tp.locator(".phones").first.locator("section.ph-apps").is_visible() and tp.locator(".phones").first.locator("section.ph-human").is_visible(), f"{dev}: 3 phones side by side")
+                check(("iPad" in dev) == (not tabs.is_visible()), f"{dev}: iPad shows the 3 phones side by side, iPhone shows tabs")
                 shot(tp, dev.replace(" ", "_").replace("(", "").replace(")", "") + "-agent-lesson1")
             if tp.locator(".move").count() and not tp.locator(".feedback.good").count():
                 it = tp.evaluate("(() => { const it = window.AGENT_LAST_ITEM; return { kind: it.kind, key: it.key }; })()")

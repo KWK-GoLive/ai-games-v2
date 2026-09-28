@@ -95,55 +95,69 @@ def do_lesson(pg, n):
         t = nx.inner_text(); nx.click()
         if "Start stage" in t: return
 
-with sync_playwright() as p:
-    br = p.chromium.launch()
-    for width in (1100, 390):
-        ctx = br.new_context(viewport={"width": width, "height": 900}, accept_downloads=True)
-        ctx.route("**/config.js", lambda r: r.fulfill(status=200, content_type="application/javascript", body='window.AIG_CONFIG={SCOREBOARD_URL:"",TIME_FACTOR:1.5};'))
-        pg = ctx.new_page(); errs = []; pg.on("pageerror", lambda e: errs.append(str(e)))
-        pg.goto(BASE + "/agent/index.html?test=1"); pg.wait_for_timeout(300)
-        pg.fill("#nick", "t" + str(width)); pg.click("button:has-text('Start my run')"); pg.wait_for_timeout(300)
-        for sno in range(1, 8):
-            do_lesson(pg, sno)
-            pg.click("button:has-text('Start stage')"); pg.wait_for_timeout(120)
-            n = 0
-            while True:
-                n += 1
-                solve_item(pg, f"@{width} stage {sno} item {n}")
-                if n == 1: no_hscroll(pg, f"@{width} stage {sno} item"); shot(pg, f"agent-stage{sno}-{width}")
-                card = pg.locator(".result-card")
-                check(card.count() == 1 and "Right" in card.inner_text(), f"@{width} stage {sno} item {n} full marks: " + (card.inner_text()[:120] if card.count() else "no result"))
-                b = card.locator("button").first; t = b.inner_text(); b.click(); pg.wait_for_timeout(100)
-                if "Next item" not in t: break
-            nb = pg.locator("button:has-text('Next: lesson'), button:has-text('See my results')")
-            if nb.count(): nb.first.click(); pg.wait_for_timeout(150)
-        check(pg.locator(".big-points").count() == 1, f"@{width} results screen")
-        # ---------- Agent Arena ----------
-        pg.goto(BASE + "/agent-final/index.html?test=1"); pg.wait_for_timeout(300)
-        pg.click("button:has-text('Start my run')"); pg.wait_for_timeout(200); pg.click("button:has-text('Start stage')"); pg.wait_for_timeout(150)
-        for sidx in range(12):
-            st = pg.evaluate("(() => { const s = window.AGENT_STEP; return { kind: s.kind, key: s.key, solution: s.solution, id: s.id }; })()")
-            m = pg.locator(".move").last
-            if st["kind"] == "calc":
-                for t in st["solution"]: m.get_by_role("button", name=t, exact=True).first.click()
-                m.locator("button:has-text('Send to')").click()
-            elif st["kind"] == "search":
-                for w in ("coffee", "price"): click_val(m, w)
-                m.locator("button:has-text('Search')").click()
-            else:
-                click_val(m, st["key"])
-            pg.wait_for_timeout(80)
-            phone_rule(pg, f"@{width} arena step {sidx+1}")
-            if sidx in (7, 10): no_hscroll(pg, f"@{width} arena step {sidx+1}"); shot(pg, f"agent-arena-step{sidx+1}-{width}")
+CONFIG = 'window.AIG_CONFIG={SCOREBOARD_URL:"",TIME_FACTOR:1.5};'
+def config_route(ctx):
+    ctx.route("**/config.js", lambda r: r.fulfill(status=200, content_type="application/javascript", body=CONFIG))
+
+def play(ctx, label, W, per_item=None):
+    """Plays all 7 lessons, all 7 stages and the Agent Arena in this browser context. per_item(pg, what) runs extra checks."""
+    pg = ctx.new_page(); errs = []; pg.on("pageerror", lambda e: errs.append(str(e)))
+    pg.goto(BASE + "/agent/index.html?test=1"); pg.wait_for_timeout(300)
+    pg.fill("#nick", "t" + str(W)); pg.click("button:has-text('Start my run')"); pg.wait_for_timeout(300)
+    for sno in range(1, 8):
+        do_lesson(pg, sno)
+        pg.click("button:has-text('Start stage')"); pg.wait_for_timeout(120)
+        n = 0
+        while True:
+            n += 1
+            solve_item(pg, f"@{label} stage {sno} item {n}")
+            if n == 1: no_hscroll(pg, f"@{label} stage {sno} item"); shot(pg, f"agent-stage{sno}-{label}")
+            if per_item: per_item(pg, f"@{label} stage {sno} item {n}")
             card = pg.locator(".result-card")
-            check("Right" in card.inner_text(), f"@{width} arena step {sidx+1} ({st['id']}) full marks")
-            card.locator("button").first.click(); pg.wait_for_timeout(100)
-        nb = pg.locator("button:has-text('See my results')")
+            check(card.count() == 1 and "Right" in card.inner_text(), f"@{label} stage {sno} item {n} full marks: " + (card.inner_text()[:120] if card.count() else "no result"))
+            b = card.locator("button").first; t = b.inner_text(); b.click(); pg.wait_for_timeout(100)
+            if "Next item" not in t: break
+        nb = pg.locator("button:has-text('Next: lesson'), button:has-text('See my results')")
         if nb.count(): nb.first.click(); pg.wait_for_timeout(150)
-        check(pg.locator(".big-points").count() == 1, f"@{width} arena results")
-        check(not errs, f"@{width} no page errors: " + "; ".join(errs[:3]))
-        ctx.close()
-    br.close()
-httpd.shutdown()
-print(f"{len(fails)} check(s) FAILED" if fails else "All agent browser checks passed")
-sys.exit(1 if fails else 0)
+    check(pg.locator(".big-points").count() == 1, f"@{label} results screen")
+    # ---------- Agent Arena ----------
+    pg.goto(BASE + "/agent-final/index.html?test=1"); pg.wait_for_timeout(300)
+    pg.click("button:has-text('Start my run')"); pg.wait_for_timeout(200); pg.click("button:has-text('Start stage')"); pg.wait_for_timeout(150)
+    for sidx in range(12):
+        st = pg.evaluate("(() => { const s = window.AGENT_STEP; return { kind: s.kind, key: s.key, solution: s.solution, id: s.id }; })()")
+        m = pg.locator(".move").last
+        if st["kind"] == "calc":
+            for t in st["solution"]: m.get_by_role("button", name=t, exact=True).first.click()
+            m.locator("button:has-text('Send to')").click()
+        elif st["kind"] == "search":
+            for w in ("coffee", "price"): click_val(m, w)
+            m.locator("button:has-text('Search')").click()
+        else:
+            click_val(m, st["key"])
+        pg.wait_for_timeout(80)
+        phone_rule(pg, f"@{label} arena step {sidx+1}")
+        if sidx in (7, 10): no_hscroll(pg, f"@{label} arena step {sidx+1}"); shot(pg, f"agent-arena-step{sidx+1}-{label}")
+        if per_item: per_item(pg, f"@{label} arena step {sidx+1}")
+        card = pg.locator(".result-card")
+        check("Right" in card.inner_text(), f"@{label} arena step {sidx+1} ({st['id']}) full marks")
+        card.locator("button").first.click(); pg.wait_for_timeout(100)
+    nb = pg.locator("button:has-text('See my results')")
+    if nb.count(): nb.first.click(); pg.wait_for_timeout(150)
+    check(pg.locator(".big-points").count() == 1, f"@{label} arena results")
+    check(not errs, f"@{label} no page errors: " + "; ".join(errs[:3]))
+
+def main():
+    with sync_playwright() as p:
+        br = p.chromium.launch()
+        for width in (1100, 390):
+            ctx = br.new_context(viewport={"width": width, "height": 900}, accept_downloads=True)
+            config_route(ctx)
+            play(ctx, str(width), width)
+            ctx.close()
+        br.close()
+    httpd.shutdown()
+    print(f"{len(fails)} check(s) FAILED" if fails else "All agent browser checks passed")
+    sys.exit(1 if fails else 0)
+
+if __name__ == "__main__":
+    main()
