@@ -22,7 +22,12 @@
         skill: st.kind === "calc" ? "Calculator" : st.kind === "search" ? "File search" : /query|open/.test(st.id) ? "Web search" : st.id === "inject" ? "Hidden orders" : st.id === "perm" ? "Permissions" : st.id === "memo" ? "File maker" : st.id === "reply" ? "Reply" : "Which app?",
         hint: st.kind === "calc" ? "Tap the numbers and signs in order. SUM(...) adds up a column of the sales file." : st.kind === "search" ? "Pick words that only the price-change piece would contain." : "Think about what Ploy asked, and what is safe.",
         grade: function (a) { return R.grade(st, a); },
-        render: function (box, api) {
+        render: function (box, api) {   // on short screens, show the first move below the chat history
+          var ctl = this.renderStep(box, api), first = box.querySelector(".move");
+          if (first) A.showFirst(box.firstChild, first);
+          return ctl;
+        },
+        renderStep: function (box, api) {
           var holder = h("div"); box.appendChild(holder);
           var P = PH.Phones(holder, { apps: ["calc", "web", "files", "maker"] });
           P.add({ from: "human", to: "model", text: R.TASK });
@@ -45,7 +50,7 @@
               P.add({ from: "calc", to: "model", text: window.AGENT_ITEMS.evalChips(toks).text });
               api.submit(toks.slice());
             });
-            box.appendChild(DR.move(1, "Your Calculator request", h("div", { class: "stack" }, line, tiles, h("div", { class: "row" }, undo, h("span", { style: "flex:1" }), send))));
+            box.appendChild(DR.move(1, st.title, h("div", { class: "stack" }, line, tiles, h("div", { class: "row" }, undo, h("span", { style: "flex:1" }), send))));
             return { collect: function () { return toks.slice(); } };
           }
           if (st.kind === "search") {
@@ -61,11 +66,11 @@
               P.add({ from: "files", to: "model", text: hits.length ? hits.map(function (x, i) { return (i + 1) + ". " + x.where + ": " + x.piece.title; }).join("\n") : "No matching pieces." });
               api.submit(sel.slice());
             });
-            box.appendChild(DR.move(1, "Your search words (1–3)", h("div", { class: "stack" }, c.el, h("div", { class: "row end" }, go))));
+            box.appendChild(DR.move(1, st.title + " (1–3 words)", h("div", { class: "stack" }, c.el, h("div", { class: "row end" }, go))));
             return { collect: function () { return sel.slice(); } };
           }
           var ch = DR.choices(st.options, function (v) { api.submit(v); }, { oneCol: true });
-          box.appendChild(DR.move(1, "Your move", ch.el));
+          box.appendChild(DR.move(1, st.title, ch.el));
           return { collect: function () { return null; }, reveal: function () { ch.mark(st.key); } };
         }
       };
