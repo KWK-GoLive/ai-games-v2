@@ -55,3 +55,22 @@ New test `tests/agent-devices.py` plays everything by tapping on iPhone SE, iPho
 | Notes in the chat (e.g. the day totals) lost their line breaks | Line breaks kept |
 
 All suites pass after these changes, including the LLM games (the sticky timer card is shared).
+
+## Live progress and the teacher view (one fresh Opus review round)
+
+Built: live positions after every answered item and when a lesson opens; boards ranked by live points; `teacher.html` with the 4 main boards in one window. Review round: 0 Critical, 3 Major, 7 Minor.
+
+| # | Sev. | Finding | Fix |
+|---|---|---|---|
+| 1 | Major | Progress sheet: the time column was formatted as text, so on real Sheets every player would look "idle" | Live positions no longer go to a sheet at all (see 3); the time is a number from `Date.now()` |
+| 2 | Major | Only ~4 players per board visible at 1280×720 with 40 players | One-line rows (20 px), two columns inside a board, slow auto-scroll; test with 40 players per board: 26 visible per board at once, all 4 boards on one screen |
+| 3 | Major | A sheet write + script lock per answered item would compete with the finished-stage rows (untested load) | Live positions kept in `CacheService` (no sheet write, no lock); stale check kept |
+| 4 | Minor | Docs said the warm-up sends no progress, but it did | The warm-up now really sends only its finished row (`liveProgress: false`) |
+| 5 | Minor | A resumed run stayed frozen on the board (its restarted stage looked "older") | The start of the same stage (lesson or item 0) resets the position; tested |
+| 6 | Minor | Top-bar height measured only on load/resize | ResizeObserver; top bar kept to one line at 1280 px (legend moved to a tooltip below 1500 px) |
+| 7 | Minor | Timed-out requests not cancelled; no backoff; refresh while hidden | AbortController, backoff up to 60 s, paused while the tab is hidden |
+| 8 | Minor | First-time sheet creation race | Gone with the cache (no new sheet) |
+| 9 | Minor | Anyone could add progress rows (unbounded sheet growth) | Cache entries expire after at most 6 h; same trust level as posting results |
+| 10 | Minor | Idle and resume untested; link text in the guide | Idle test (positions aged 10 min), resume-reset test, guide wording fixed |
+
+The fixes after this round were not reviewed again by a separate reviewer.

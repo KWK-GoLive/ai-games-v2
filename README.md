@@ -58,6 +58,7 @@ Each lesson uses its own 4–6-sentence text, which is different from the stage 
 - `shared/model.js`: the toy n-gram model with back-off. Temperature: p ∝ count^(1/T).
 - `shared/arena.js`: the arena shell (sign-in, timer, scoring, resume codes, scoreboard queue). Added in v2: lessons (`stage.teach`), parts (`stage.part`) and badges (`stage.badge`).
 - `shared/tempviz.js`: the stacked bar, the pointer and the temperature calculator.
+- `shared/teacher.js`, `teacher.html`: the teacher view (the 4 main boards in one window, live).
 - `shared/board.js`, `board.html`: the class scoreboard (Warm-up / Be the LLM Arena / LLM final / Be the Agent Arena / Agent Arena; the two main games have All / Part A / Part B views).
 - `llm/js/items.js`: all stage items and the final's 12 items. Keys come from the model.
 - `llm/js/lessons.js`: the 7 lessons.
@@ -76,12 +77,19 @@ python3 tests/playthrough.py    # the whole site in Chromium: every lesson and s
 python3 tests/touch.py          # emulated iPhone 13 and iPad: tapping through LLM and Agent lesson 1, 40 px+ tap targets, the calculator by touch
 node tests/check-agent-data.js  # agent: files = game texts, recording quotes, sales totals recomputed, every stage/arena key over 120 seeds
 python3 tests/agent-play.py     # agent: all lessons, stages and the Agent Arena by clicking, 3-phone rule, downloads, at 390 and 1100 px
+python3 tests/teacher.py        # live progress: a student plays all of Be the Agent + the Agent Arena; after every lesson/item the board shows the right position and points; the teacher view (4 boards, auto-refresh, fits 1280x720)
 python3 tests/agent-devices.py  # agent by TAPPING on iPhone SE, iPhone 13, Galaxy S9+ (320 px), iPad portrait + landscape: 44 px targets, text >= 12 px, timer in view, new moves scrolled into view
 ```
 
 ## Scoreboard
 
 These steps are the same as in v1. Paste `apps-script/Code.gs` into the Apps Script of the Google Sheet, then choose **Deploy → Manage deployments → Edit → New version**. The web-app URL stays the same, so `config.js` doesn't change. Before class, delete any test rows from the `arena` tab.
+
+**Live progress (since web-app version 7).** Besides one row per finished stage (tab `arena`, the permanent record), the two main arenas and the two finals send the player's position when a lesson opens and after every answered item. These live positions are kept in the Apps Script cache (`CacheService`, at most 6 hours), not in the sheet, so they need no sheet write and no lock; an older position never replaces a newer one, except the start of the same stage (a run resumed on another computer starts that stage again). The boards rank by **live points** = finished stages + the items already answered in the current stage, and show 📖 (reading the lesson) or ▶ answered/items for the stage in progress. Position updates are best effort: if one is lost, the next one replaces it, and the finished-stage row still goes through the reliable queue. Google's Cache reference (developers.google.com/apps-script/reference/cache/cache, checked 28 Sep 2026) says the expiration time "is only a suggestion; cached data may be removed before this time if a lot of data is cached", and caps a cache at 1,000 items (above that it keeps the 900 farthest from expiration). There is one entry per player per game, refreshed at every answer, so the players who are playing right now are the ones kept; a live position can still occasionally disappear, but the finished stages are never affected. The warm-up sends only its finished row.
+
+**Teacher view** (`teacher.html?class=SEC1`, also linked from the front page and the scoreboard): Be the LLM Arena, LLM final, Be the Agent Arena and the Agent Arena in one window (2×2 under the top bar; one column on phones), one request per refresh (`action=boards`; one at a time, aborted after 20 s, slower after errors, paused while the tab is hidden). Each row is one line: rank, nickname (team), a progress bar (one segment per stage; the current stage fills as items are answered, striped = lesson; the finals have one segment per item), where the player is now (e.g. `S3 ▶ 2/5`, `📖 L4`, `✓ done`) and live points. A board with more players than fit gets two columns, and if it still doesn't fit it scrolls slowly by itself (it stops while the mouse is over it). Measured in the test at 1280×720 with 40 players per board: 26 players visible per board at once. Hovering a row shows the full details. A player with no new answer for 5 minutes is faded ("idle").
+
+Load (not measured with a real class): each student sends one small request per answered item, roughly one every 1–2 seconds for a class of 40, plus one request per board refresh. I cannot verify how Apps Script copes with this; try it once with a few students first. If the board lags, raise `BOARD_REFRESH_SECONDS` in `config.js`.
 
 ## Sources
 

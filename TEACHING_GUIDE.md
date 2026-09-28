@@ -78,4 +78,5 @@ Students always play the **model**: they choose which app to call, write the req
 ## Before class
 
 - Delete test rows in the Sheet's `arena` tab (class codes such as TEST or T1), for all five games.
+- On the projector, open the **teacher view**: front page → "All 4 boards" (top right), then type the class code (or open `teacher.html?class=YOURCODE`). It shows Be the LLM Arena, LLM final, Be the Agent Arena and the Agent Arena at once and updates by itself every few seconds: who is reading a lesson (📖 L4), how many items each student has answered in the current stage (S3 ▶ 2/5), and live points. A big class gets two columns per board and slow auto-scrolling. "Big text" makes it readable from the back; "details ↗" opens one board with every stage column and the Part A/B views.
 - Tell students to press Ctrl+Shift+R (or reload) if they opened the site before an update.
