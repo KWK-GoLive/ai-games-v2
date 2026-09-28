@@ -78,6 +78,9 @@
     function showApp(a) {
       curApp = a;
       apps.forEach(function (x) { appThreads[x].classList.toggle("hidden", x !== a); appChips[x].setAttribute("aria-pressed", String(x === a)); if (x === a) appBadge[x].classList.add("hidden"); });
+      var c = appChips[a], bar = c && c.parentNode;   // the chips are one row: keep the open app's chip in view
+      if (bar) { var cr = c.getBoundingClientRect(), br = bar.getBoundingClientRect();
+        if (cr.width && (cr.left < br.left || cr.right > br.right)) bar.scrollLeft += cr.left - br.left - 8; }
     }
     function bump(k) {
       if (k === active) return;
@@ -131,7 +134,9 @@
     /* a small grey note in the Model phone (e.g. what the harness adds before the chat) */
     function note(text, k) { put(k || "model", h("p", { class: "ph-note", text: text })); }
 
-    return { el: wrap, add: add, apps: apps, note: note, show: show, showApp: showApp, phones: ph, threads: appThreads };
+    /* the newest message the model received (for the "in your phone" reminder under the chat on small screens) */
+    function lastIn() { var l = ph.model.body.querySelectorAll(".b.left"); return l.length ? l[l.length - 1] : null; }
+    return { el: wrap, add: add, apps: apps, lastIn: lastIn, note: note, show: show, showApp: showApp, phones: ph, threads: appThreads };
   }
 
   /* Step through a script of messages with Next / Play all buttons. script: [{...message, say: "explanation"}] */

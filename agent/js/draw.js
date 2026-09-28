@@ -24,7 +24,23 @@
     });
     return { el: grid, btns: btns, mark: function (key) { btns.forEach(function (b, i) { if (String(list[i].value) === String(key)) b.classList.add("correct"); else if (b.classList.contains("picked")) b.classList.add("wrong"); }); } };
   }
-  function move(n, title, body) { return h("div", { class: "move stack" }, h("div", { class: "kicker", text: "Your move " + n + " (as the model)" }), h("h3", { text: title }), body); }
+  var curPhones = null;   // the phones of the item being played (set by drawer)
+  /* Small screens show one move below the chat, so the chat may be scrolled away: repeat the newest message the model got. */
+  function peek() {
+    var P = curPhones, b = P && P.lastIn && P.lastIn();
+    if (!b) return null;
+    var from = b.querySelector(".b-from"), txt = b.textContent.slice(from ? from.textContent.length : 0).trim();
+    if (!txt && b.querySelector(".v-file")) txt = "a file card (View / Download are in your phone)";
+    var go = h("button", { class: "btn ghost small", type: "button", text: "↑ Show my phone" });
+    go.addEventListener("click", function () { P.show("model"); P.el.scrollIntoView({ block: "start", behavior: "smooth" }); });
+    return h("div", { class: "ph-peek", role: "note" }, h("div", { class: "small muted", text: "Newest in your phone" + (from ? " — " + from.textContent : "") + ":" }),
+      h("div", { class: "ph-peek-t", text: txt.length > 320 ? txt.slice(0, 317) + "…" : txt }), go);
+  }
+  function move(n, title, body) {
+    var el = h("div", { class: "move stack" }, h("div", { class: "kicker", text: "Your move " + n + " (as the model)" }), h("h3", { text: title }), n > 1 ? peek() : null, body);
+    if (n > 1) setTimeout(function () { A.reveal(el); }, 0);   // phones: the next move appears below; bring it into view
+    return el;
+  }
   function hitsEl(list) { return function () { return h("span", {}, list.map(function (x, i) { return h("span", { class: i ? "ph-hit" : "" }, h("b", { text: x.head }), " " + x.body); })); }; }
 
   /* ---------- Stage 1: which app? ---------- */
@@ -223,10 +239,13 @@
     return function (box, api) {
       var holder = h("div");
       box.appendChild(holder);
-      var P = PH.Phones(holder, { apps: it.apps || APPS_FOR[it.kind] });
+      var P = curPhones = PH.Phones(holder, { apps: it.apps || APPS_FOR[it.kind] });
       if (/[?&]test=1\b/.test(location.search) && /^(localhost|127\.0\.0\.1|)$/.test(location.hostname)) root.AGENT_LAST_ITEM = it;
       if (it.intro) it.intro(P);
-      return DRAW[it.kind](it, box, api, P);
+      var ctl = DRAW[it.kind](it, box, api, P);
+      var first = box.querySelector(".move");
+      if (first && !box.closest(".practice")) A.showFirst(holder, first);
+      return ctl;
     };
   }
   function wrap(fn) { return function (rng) { return fn(rng).map(function (it) { it.render = drawer(it); return it; }); }; }
