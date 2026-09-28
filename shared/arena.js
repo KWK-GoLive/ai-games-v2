@@ -127,7 +127,37 @@
   function getProfile() { var p = load(PROFILE_KEY) || {}; return { nickname: cleanNick(p.nickname), team: cleanTeam(p.team), classCode: cleanClass(p.classCode) }; }
   function setProfile(p) { save(PROFILE_KEY, { nickname: p.nickname || "", team: p.team || "", classCode: p.classCode || "" }); }
 
+  /* Phones and tablets: bring a box that just appeared into view, below the sticky top bar and timer.
+   * Small boxes are scrolled as little as possible (so what's above, e.g. the chat, stays in view); tall ones show their top. */
+  function stickyBottom() {   // where the sticky top bar + timer card end once the page is scrolled down
+    var tb = document.querySelector(".topbar"), hud = document.querySelector(".hud-card");
+    return (tb ? tb.offsetHeight : 0) + (hud && hud.offsetParent ? hud.offsetHeight : 0);
+  }
+  function reveal(el) {
+    var smooth = !(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+    requestAnimationFrame(function () {
+      if (!el.isConnected) return;
+      var r = el.getBoundingClientRect(), topLim = stickyBottom() + 8, vh = window.innerHeight;
+      if (r.top >= topLim && r.bottom <= vh) return;
+      var dy = (r.top < topLim || r.height > vh - topLim) ? r.top - topLim : r.bottom - vh + 12;
+      window.scrollBy({ top: dy, behavior: smooth ? "smooth" : "auto" });
+    });
+  }
+
+  /* An item that starts with a chat above its first move: on a short screen, scroll just enough that the first move's
+   * title shows (about 220 px above the bottom), but never past the top of the chat. */
+  function showFirst(chat, first) {
+    setTimeout(function () {
+      if (!chat.isConnected || !first.isConnected) return;
+      var topLim = stickyBottom() + 8, vh = window.innerHeight;
+      var need = first.getBoundingClientRect().top - (vh - 220), max = chat.getBoundingClientRect().top - topLim;
+      var dy = Math.min(need, max);
+      if (dy > 0) window.scrollBy({ top: dy, behavior: "auto" });
+    }, 0);
+  }
+
   var ARENA = window.ARENA = {
+    reveal: reveal, showFirst: showFirst,
     getProfile: getProfile, setProfile: setProfile,
     h: h, clear: clear, makeRng: makeRng, shuffle: shuffle, pick: pick, score: score,
     cleanNick: cleanNick, cleanClass: cleanClass, cleanTeam: cleanTeam, hash: hash,
@@ -465,14 +495,17 @@
       var bar = h("span", { style: "width:100%" });
       var timer = h("div", { class: "timer", role: "progressbar", "aria-label": "time left", "aria-valuemin": "0", "aria-valuemax": String(limit) }, bar);
       var secsEl = h("b", { text: limit + "s" });
-      app.appendChild(h("section", { class: "card stack" },
+      var hudCard = h("section", { class: "card stack hud-card" },
         h("div", { class: "hud" },
-          h("span", {}, "Stage ", h("b", { text: (run.stage + 1) + "/" + stages.length }), " · ", sd.name),
+          h("span", {}, "Stage ", h("b", { text: (run.stage + 1) + "/" + stages.length }), h("span", { class: "hud-more", text: " · " + sd.name })),
           h("span", {}, "Item ", h("b", { text: (run.item + 1) + "/" + items.length })),
           h("span", {}, h("b", { text: String(tot.points) }), " pts"),
-          streak >= 2 ? h("span", { class: "streak", text: "🔥 " + streak + " in a row" + (streak >= 2 ? " (next right answer ×1.5)" : "") }) : null,
+          streak >= 2 ? h("span", { class: "streak" }, "🔥 " + streak, h("span", { class: "hud-more", text: " in a row (next right answer ×1.5)" })) : null,
           run.mode === "practice" ? h("span", { class: "pill", text: "Practice" }) : null),
-        h("div", { class: "row" }, timer, secsEl)));
+        h("div", { class: "row" }, timer, secsEl));
+      app.appendChild(hudCard);
+      var tb = document.querySelector(".topbar");
+      hudCard.style.top = (tb ? tb.offsetHeight : 0) + "px";   // sticks just under the top bar, so the timer stays in view
 
       var box = h("div", { class: "item-box stack" });
       var itemCard = h("section", { class: "card stack" }, badgeOf(sd), it.skill ? h("div", { class: "kicker", text: "Skill: " + it.skill }) : null, it.title ? h("h2", { text: it.title }) : null, box);
@@ -554,7 +587,7 @@
           h("div", { class: "row end" }, nextBtn));
         resultHolder.appendChild(card);
         card.focus({ preventScroll: true });
-        card.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        reveal(card);
       }
     }
 
