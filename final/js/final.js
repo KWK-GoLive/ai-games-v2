@@ -21,10 +21,10 @@
     ],
     finalCard: function () {
       return h("section", { class: "card soft stack" },
-        h("div", { class: "kicker", text: "Coming soon" }),
-        h("h2", { text: "Part 2: AI agents" }),
-        h("p", { text: "The agent games are being rebuilt. Your teacher will tell you when they're ready." }),
-        h("div", { class: "row end" }, h("a", { class: "btn", href: "../index.html", text: "All games" })));
+        h("div", { class: "kicker", text: "Next: part 2" }),
+        h("h2", { text: "Be the Agent Arena" }),
+        h("p", { text: "A language model only writes text. So how does an AI agent read your files, search the web and make real files? Play the model inside an agent and find out." }),
+        h("div", { class: "row end" }, h("a", { class: "btn", href: "../index.html", text: "All games" }), h("a", { class: "btn primary", href: "../agent/index.html", text: "Start part 2 \u2192" })));
     }
   });
 })();
