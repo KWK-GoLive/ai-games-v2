@@ -51,6 +51,9 @@
   });
   var last = null;
   var projBtn = h("button", { class: "btn ghost", type: "button", text: "Big text" });
+  var teacherLink = h("a", { class: "btn", href: "teacher.html", text: "All 4 boards in one window ↗" });
+  function teacherHref() { teacherLink.href = "teacher.html" + (classCode ? "?class=" + encodeURIComponent(classCode) : ""); }
+  teacherHref();
   var form = h("form", { class: "row" },
     h("label", { class: "field", for: "cc", style: "display:flex;gap:8px;align-items:center" }, "Class code", codeIn),
     h("button", { class: "btn primary", type: "submit", text: "Show" }));
@@ -58,7 +61,7 @@
   projBtn.addEventListener("click", function () { document.documentElement.classList.toggle("projector"); });
   app.appendChild(h("section", { class: "card stack" },
     h("div", { class: "kicker", text: "Class scoreboard" }),
-    h("div", { class: "row" }, tabs, h("span", { style: "flex:1" }), projBtn, csvBtn),
+    h("div", { class: "row" }, tabs, h("span", { style: "flex:1" }), teacherLink, projBtn, csvBtn),
     partRow,
     form));
   var msg = h("p", { class: "feedback", "aria-live": "polite" });
@@ -67,11 +70,18 @@
   app.appendChild(body);
 
   function syncUrl() {
+    teacherHref();
     var q = new URLSearchParams(location.search);
     q.set("game", game); if (HAS_PARTS[game] && part !== "all") q.set("part", part); else q.delete("part"); if (classCode) q.set("class", classCode); else q.delete("class");
     try { history.replaceState(null, "", "?" + q.toString()); } catch (e) { /* file:// */ }
   }
 
+  /* the stage a player is on right now: "📖 lesson" or "▶ 2/5" (answered/items) with the points so far */
+  function liveCell(lv) {
+    var t = lv.phase === "lesson" ? "📖 lesson" : "▶ " + lv.item + "/" + lv.items;
+    return h("td", { class: "num live", title: lv.phase === "lesson" ? "Reading the lesson" : "Playing this stage: " + lv.item + " of " + lv.items + " items answered, " + lv.points + " points so far" },
+      h("span", { class: "live-pos", text: t }), lv.points ? h("span", { class: "live-pts", text: " " + lv.points }) : null);
+  }
   var seq = 0;
   function load(show) {
     if (!classCode) { clear(body); msg.className = "feedback muted"; msg.textContent = "Type the class code to show its scoreboard."; return; }
@@ -99,7 +109,8 @@
     if (partView) {
       var players = r0.players.map(function (p) {
         var per = idx.map(function (i) { return p.perStage[i]; });
-        return { nickname: p.nickname, team: p.team, perStage: per, points: per.reduce(function (a, v) { return a + (v || 0); }, 0), done: per.filter(function (v) { return v != null; }).length, seconds: p.seconds };
+        var lv = p.live && idx.indexOf(p.live.stage - 1) >= 0 ? p.live : null;   // a live position inside this part counts too
+        return { nickname: p.nickname, team: p.team, perStage: per, live: lv, points: per.reduce(function (a, v) { return a + (v || 0); }, 0) + (lv ? lv.points : 0), done: per.filter(function (v) { return v != null; }).length + (lv ? 1 : 0), seconds: p.seconds };
       }).filter(function (p) { return p.done; });
       players.sort(function (a, b) { return b.points - a.points || b.done - a.done || (a.nickname < b.nickname ? -1 : 1); });
       var teams = {};
@@ -108,7 +119,7 @@
       tl.sort(function (a, b) { return b.average - a.average || b.members - a.members; });
       r = { players: players, teams: tl };
     } else {
-      r = { players: r0.players.map(function (p) { return Object.assign({}, p, { perStage: idx.map(function (i) { return p.perStage[i]; }) }); }), teams: r0.teams };
+      r = { players: r0.players.map(function (p) { return Object.assign({}, p, { perStage: idx.map(function (i) { return p.perStage[i]; }), points: p.livePoints != null ? p.livePoints : p.points }); }), teams: r0.teams };
     }
     var gname = GAMES.filter(function (g) { return g.id === game; })[0].name + (partView ? " \u00b7 Part " + part : "");
     if (!r.players.length) {
@@ -120,7 +131,7 @@
       tb.appendChild(h("tr", { class: i === 0 ? "top1" : null },
         h("td", { class: "rank", text: String(i + 1) }),
         h("td", {}, h("b", { text: p.nickname }), p.team ? h("div", { class: "small muted", text: p.team }) : null),
-        p.perStage.map(function (v) { return h("td", { class: "num", text: v == null ? "·" : String(v) }); }),
+        p.perStage.map(function (v, j) { return p.live && p.live.stage - 1 === idx[j] ? liveCell(p.live) : h("td", { class: "num", text: v == null ? "·" : String(v) }); }),
         partView ? null : h("td", { class: "num", text: p.correct + "/" + p.items }),
         partView ? null : h("td", { class: "num acc", text: p.items ? Math.round(100 * p.correct / p.items) + "%" : "–" }),
         h("td", { class: "num" }, h("b", { text: String(p.points) }))));
@@ -132,7 +143,7 @@
           names.map(function (n, i) { return h("th", { class: "num", title: n, text: names.length === 1 ? "Stage" : "S" + (idx[i] + 1) }); }),
           partView ? null : h("th", { class: "num", text: "Right" }), partView ? null : h("th", { class: "num", title: "Share of answers fully right (speed doesn't count here)", text: "% right" }), h("th", { class: "num", text: partView ? "Part points" : "Points" }))),
         tb)),
-      h("p", { class: "muted small", text: "Points include speed bonuses. “% right” shows careful answers, whatever the speed." }),
+      h("p", { class: "muted small", text: "Points include speed bonuses and the items already answered in a stage that is still going (▶ answered/items; 📖 = reading the lesson). “% right” counts finished stages." }),
       h("p", { class: "muted small", text: (names.length > 1 ? "Stages: " + names.map(function (n, i) { return "S" + (idx[i] + 1) + " " + n; }).join(" · ") + ". " : "") + "Only each nickname's first run counts. " + (partView ? "Ranked by this part's points." : "Ties: more fully right answers, then less time.") })));
     if (r.teams.length) {
       body.appendChild(h("section", { class: "card stack" },

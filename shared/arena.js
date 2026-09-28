@@ -456,6 +456,7 @@
       }
       app.appendChild(h("section", { class: "card soft" }, bottom));
       sd.teach(box, done, { h: h, clear: clear, stageNo: run.stage + 1, top: top });
+      sendProgress(run, "lesson");
       if (TEST) window.ARENA_LESSON = { done: done, id: sd.id };
     }
 
@@ -487,6 +488,7 @@
       var items = itemsFor(run, run.stage);
       var it = items[run.item];
       var limit = Math.round((it.limit || 45) * TIME_FACTOR);
+      if (run.item === 0) sendProgress(run, "item");   // the stage has started: 0 answered
       // The start time and hint are saved, so reloading the page doesn't restart the clock or undo a hint.
       if (!run.cur || run.cur.s !== run.stage || run.cur.i !== run.item) { run.cur = { s: run.stage, i: run.item, t0: Date.now(), hint: false }; persist(); }
       var t0 = run.cur.t0, done = false, hintUsed = !!run.cur.hint;
@@ -568,6 +570,7 @@
         if (stageDone) { run.stage++; run.item = 0; }
         if (stageDone && run.stage >= stages.length) run.complete = true;
         if (stageDone) stageFinished(run, run.stage - 1, items.length);
+        else sendProgress(run, "item");
         persist();
 
         var verdict = res.frac === 1 ? "✓ Right!" : res.frac > 0 ? "Partly right (" + Math.round(res.frac * 100) + "%)" : timedOut ? "⏱ Time's up" : "✗ Not quite";
@@ -590,6 +593,26 @@
         reveal(card);
       }
     }
+
+    /* ---------- live position for the teacher's board: after every answered item and when a lesson opens ----------
+     * Best effort, newest first: only the latest position waits while one is on its way (the finished-stage rows
+     * above still go through the reliable queue). The server ignores a position older than the one it has. */
+    var progBusy = false, progNext = null;
+    function sendProgress(run, phase) {
+      if (def.liveProgress === false || !sendsToBoard(run) || run.complete || notCounted()) return;
+      var si = run.stage, sr = (run.results[si] || []).filter(Boolean);
+      progNext = { game: def.game, classCode: run.player.classCode, runId: run.runId, nickname: run.player.nickname, team: run.player.team,
+        stage: si + 1, phase: phase, item: phase === "lesson" ? 0 : run.item, items: itemsFor(run, si).length,
+        points: sr.reduce(function (a, r) { return a + r.points; }, 0), correct: sr.filter(function (r) { return r.frac === 1; }).length };
+      pumpProgress();
+    }
+    function pumpProgress() {
+      if (progBusy || !progNext) return;
+      var p = progNext; progNext = null; progBusy = true;
+      apiGet({ action: "progress", payload: JSON.stringify(p), t: Date.now() }, 20000).catch(function () { /* offline: the next position will do */ })
+        .then(function () { progBusy = false; pumpProgress(); });
+    }
+    if (TEST) window.ARENA_PROGRESS = function () { return { busy: progBusy, next: progNext }; };
 
     function stageFinished(run, si, n) {
       if (!sendsToBoard(run)) return;
