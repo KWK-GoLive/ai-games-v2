@@ -1,6 +1,6 @@
 # AI games v2 (Part 1: language models · Part 2: AI agents)
 
-Browser games for complete beginners in the course "AI for Data Work". Plain HTML, CSS and JavaScript: no build step and no libraries. Made for phones, iPads and computers: everything is tap-only, tap targets are at least 40–44 px, and nothing scrolls sideways from 360 px up. It runs on GitHub Pages, and all the model work happens in the browser.
+Browser games for complete beginners in the course "AI for Data Work". Plain HTML, CSS and JavaScript: no build step and no libraries. Made for phones, iPads and computers: everything is tap-only, tap targets are at least 44 px on touch screens, and nothing scrolls sideways from 320 px up. While playing, the timer bar stays at the top of the screen, and each new step scrolls into view. It runs on GitHub Pages, and all the model work happens in the browser.
 
 **Live site:** https://kwk-golive.github.io/ai-games-v2/ (the first version stays at https://kwk-golive.github.io/ai-games/).
 
@@ -14,7 +14,7 @@ Browser games for complete beginners in the course "AI for Data Work". Plain HTM
 
 ## Part 2: Be the Agent (three linked chat phones)
 
-The student always plays the **model**. The screen shows three chat phones: **Human 📱** (Ploy, the café's shift manager), **Model 🤖** (the student) and **Apps 🧰** (the harness, one thread per app). Every message appears twice: on the right in the sender's phone and on the left in the receiver's phone, so the Model phone is exactly what the model sees (its context window). Wide screens show the three phones side by side; below 880 px one phone is shown at a time, with tabs and "new message" badges.
+The student always plays the **model**. The screen shows three chat phones: **Human 📱** (Ploy, the café's shift manager), **Model 🤖** (the student) and **Apps 🧰** (the harness, one thread per app). Every message appears twice: on the right in the sender's phone and on the left in the receiver's phone, so the Model phone is exactly what the model sees (its context window). Wide screens show the three phones side by side; below 740 px (phones) one phone is shown at a time, with tabs and "new message" badges and a reminder of the newest message under the chat; iPads show all three.
 
 The apps really run in the browser (`agent/js/tools.js`): a Calculator (arithmetic plus `SUM(col WHERE col = v)` on the sales CSV), File search (word matching over pieces of the café's PDF/Word files, labelled with page or section), Web search over a **made-up mini-web** (10 pages; only one quotes a real site, see Sources), and a File maker that builds real .xlsx, .docx and .csv files. No `eval` is used.
 
@@ -76,6 +76,7 @@ python3 tests/playthrough.py    # the whole site in Chromium: every lesson and s
 python3 tests/touch.py          # emulated iPhone 13 and iPad: tapping through LLM and Agent lesson 1, 40 px+ tap targets, the calculator by touch
 node tests/check-agent-data.js  # agent: files = game texts, recording quotes, sales totals recomputed, every stage/arena key over 120 seeds
 python3 tests/agent-play.py     # agent: all lessons, stages and the Agent Arena by clicking, 3-phone rule, downloads, at 390 and 1100 px
+python3 tests/agent-devices.py  # agent by TAPPING on iPhone SE, iPhone 13, Galaxy S9+ (320 px), iPad portrait + landscape: 44 px targets, text >= 12 px, timer in view, new moves scrolled into view
 ```
 
 ## Scoreboard

@@ -36,3 +36,22 @@ All six test suites pass after the fixes.
 | 5 | Minor | Stage 2 rule said "on top", grading needs "alone on top" | Rule text updated |
 
 The round-2 fixes are **unreviewed fixes** (Minor, text/length only). All six test suites pass after them.
+
+## Phone and iPad pass (after round 2, not reviewed by a separate reviewer)
+
+New test `tests/agent-devices.py` plays everything by tapping on iPhone SE, iPhone 13, Galaxy S9+, iPad portrait and landscape. What it found, and the fixes:
+
+| Problem | Fix |
+|---|---|
+| Sideways scroll on 320 px phones (long file names / e-mail addresses in answer buttons) | Answer buttons wrap long words; grid columns can shrink |
+| Timer scrolled out of view while answering | The stage/timer card sticks under the top bar (all games); on phones it is one compact line |
+| The next "Your move" box and the result card appeared below the screen | They scroll into view when they appear (smoothly, unless the device asks for reduced motion) |
+| On phones the chat is scrolled away when move 2 asks you to read the app's reply | Moves 2+ show "Newest in your phone" with a "↑ Show my phone" button (phones only) |
+| First move below the screen on short phones and in the Agent Arena | Shorter chat on short screens (height tied to the screen), and the page scrolls just enough to show the first move |
+| Agent Arena: the question was only in the item title, which scrolled away | The question is now also the move's title |
+| Apps phone: app chips stacked one per line (tall) | One row that scrolls sideways; the open app's chip is kept in view |
+| Text under 12 px (bubble labels, badges); a few 32–40 px buttons | 12 px minimum; 44 px buttons on touch screens |
+| iPad portrait showed one phone with tabs | iPads (≥ 741 px) now show all three phones side by side; tabs only on phones |
+| Notes in the chat (e.g. the day totals) lost their line breaks | Line breaks kept |
+
+All suites pass after these changes, including the LLM games (the sticky timer card is shared).
