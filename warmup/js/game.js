@@ -17,6 +17,7 @@
   }
   A.start({
     game: "warmup",
+    liveProgress: false,   // a 5-minute warm-up: only its finished row goes to the board
     kicker: "Part 1 · warm-up",
     title: "What comes next?",
     intro: [
