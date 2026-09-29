@@ -67,7 +67,7 @@ window.LLMA_DATA = {
     ] }
   ],
 
-  /* Stage 7 (three-word boss): worlds whose wording makes the 3-, 2- and 1-word keyholes disagree.
+  /* Stage 6 (three-word boss): worlds whose wording makes the 3-, 2- and 1-word keyholes disagree.
    * "ask" = sentence starts the model must continue. tests/check-data.js checks each world has at least
    * 2 starts where the model uses 3 words, 2 where it backs off to 2, and 2 where it backs off to 1. */
   boss3: [
@@ -106,7 +106,7 @@ window.LLMA_DATA = {
       "on monday they", "then we play", "at school they play", "so they eat"] }
   ],
 
-  /* Stage 6: example chats. The model learns them as  Q: question A: answer  and answers new questions by continuing after "A:". */
+  /* Stage 7 (Chat brain): example chats. The model learns them as  Q: question A: answer  and answers new questions by continuing after "A:". */
   chats: [
     { id: "library", name: "Sunny Library", qa: [
       ["when does the library open", "at nine am"],
