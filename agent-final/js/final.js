@@ -20,7 +20,7 @@
       return {
         title: "Step " + (si + 1) + " of " + S.length + ": " + st.title, limit: st.limit, key: st.kind === "calc" ? st.solution : st.key,
         skill: st.kind === "calc" ? "Calculator" : st.kind === "search" ? "File search" : /query|open/.test(st.id) ? "Web search" : st.id === "inject" ? "Hidden orders" : st.id === "perm" ? "Permissions" : st.id === "memo" ? "File maker" : st.id === "reply" ? "Reply" : "Which app?",
-        hint: st.kind === "calc" ? "Tap the numbers and signs in order. SUM(...) adds up a column of the sales file." : st.kind === "search" ? "Pick words that only the price-change piece would contain." : "Think about what Ploy asked, and what is safe.",
+        hint: st.hint,
         grade: function (a) { return R.grade(st, a); },
         render: function (box, api) {   // on short screens, show the first move below the chat history
           var ctl = this.renderStep(box, api), first = box.querySelector(".move");
@@ -29,8 +29,8 @@
         },
         renderStep: function (box, api) {
           var holder = h("div"); box.appendChild(holder);
-          var P = PH.Phones(holder, { apps: ["calc", "web", "files", "maker"] });
-          P.add({ from: "human", to: "model", text: R.TASK });
+          var P = PH.Phones(holder, { apps: ["calc", "web", "files", "maker"], filesBase: "../agent/files/" });
+          P.add({ from: "human", to: "model", text: R.TASK, files: R.TASK_FILES });
           for (var j = 0; j < si; j++) S[j].after.forEach(function (m) { P.add(m.file ? Object.assign({}, m, { el: memoCard(S[j].memo) }) : m); });
           if (TEST) window.AGENT_STEP = st;
           if (st.kind === "calc") {
@@ -63,13 +63,17 @@
             go.addEventListener("click", function () {
               var hits = T.fileSearch(sel.join(" "), 3);
               P.add({ from: "model", to: "files", text: "search: " + sel.join(" ") });
-              P.add({ from: "files", to: "model", text: hits.length ? hits.map(function (x, i) { return (i + 1) + ". " + x.where + ": " + x.piece.title; }).join("\n") : "No matching pieces." });
+              P.add({ from: "files", to: "model", text: hits.length ? hits.map(function (x, i) { return (i + 1) + ". " + x.where + ": " + x.piece.title + " (matched: " + x.matched.join(", ") + ")"; }).join("\n") : "No matching pieces." });
               api.submit(sel.slice());
             });
             box.appendChild(DR.move(1, st.title + " (1–3 words)", h("div", { class: "stack" }, c.el, h("div", { class: "row end" }, go))));
             return { collect: function () { return sel.slice(); } };
           }
-          var ch = DR.choices(st.options, function (v) { api.submit(v); }, { oneCol: true });
+          var ch = DR.choices(st.options, function (v) {
+            // the final reply goes to Ploy, with the memo file attached
+            if (st.id === "reply") P.add({ from: "model", to: "human", text: st.options.filter(function (o) { return o.value === v; })[0].label, attach: memoCard(S.filter(function (x) { return x.id === "memo"; })[0].memo) });
+            api.submit(v);
+          }, { oneCol: true });
           box.appendChild(DR.move(1, st.title, ch.el));
           return { collect: function () { return null; }, reveal: function () { ch.mark(st.key); } };
         }
