@@ -29,8 +29,17 @@
 
   /* the café's real files (in agent/files/): a 📎 chip on a message opens them */
   var REAL_FILES = ["moonbean_sales_aug2026.csv", "Moonbean_staff_handbook.pdf", "Moonbean_staff_handbook.docx", "Moonbean_menu_2026.docx", "Supplier_letter_Aug2026.pdf"];
-  var FILE_LABELS = { "moonbean_sales_aug2026.csv": "Sales 1–10 Aug (CSV)", "Moonbean_staff_handbook.pdf": "Staff handbook (PDF)", "Moonbean_staff_handbook.docx": "Staff handbook (Word)",
-    "Moonbean_menu_2026.docx": "Menu (Word)", "Supplier_letter_Aug2026.pdf": "Supplier letter (PDF)", "bobby_notes.csv": "Bobby's notes (CSV)" };
+  /* chips show the real file names (29 Sep 2026), exactly as the apps list them */
+  var SEARCH_ALL = "the café's 3 documents";
+  /* the file the app opens for a model request (the model can't send a file: it names it). Given as m.opens, or read from the request. */
+  function opensOf(app, text) {
+    text = String(text || "");
+    if (app === "calc" && /SUM\(/.test(text)) return ["moonbean_sales_aug2026.csv"];
+    if (app === "files" && /^search: /.test(text)) return [SEARCH_ALL];
+    if (app === "files" && /^open: /.test(text)) { var f = /^open: ([^,(\n]+?)(?:,| \(|\n|$)/.exec(text); return f ? [f[1].trim()] : null; }
+    if (app === "maker") { var src = / from (\S+\.(?:csv|pdf|docx))/.exec(text), chk = /^open file: (\S+)/.exec(text); return src ? [src[1]] : chk ? [chk[1]] : null; }
+    return null;
+  }
 
   /* opts: { apps: ["calc", "files", ...], humanName, modelName, filesBase ("files/"), compactAt (px) } */
   function Phones(container, opts) {
@@ -96,14 +105,20 @@
 
     function fileChip(name) {
       var real = REAL_FILES.indexOf(name) >= 0;
-      var label = "📎 " + (FILE_LABELS[name] || name);
+      var label = "📎 " + name;
       return real ? h("a", { class: "b-file", href: (opts.filesBase || "files/") + name, target: "_blank", rel: "noopener", title: name + " (opens the real file)", text: label })
         : h("span", { class: "b-file", title: name, text: label });
+    }
+    function openChip(name) {
+      var real = REAL_FILES.indexOf(name) >= 0, label = "📂 " + (name === SEARCH_ALL ? "searches: " : "opens: ") + name;
+      return real ? h("a", { class: "b-file b-open", href: (opts.filesBase || "files/") + name, target: "_blank", rel: "noopener", title: "The app opens " + name + " from the shared folder (the model only names it)", text: label })
+        : h("span", { class: "b-file b-open", title: name === SEARCH_ALL ? "Moonbean_staff_handbook.pdf, Moonbean_menu_2026.docx, Supplier_letter_Aug2026.pdf" : name, text: label });
     }
     function content(m) {
       var base = m.el ? (typeof m.el === "function" ? m.el() : m.el.cloneNode(true))
         : m.kind === "call" ? h("code", { class: "ph-code", text: m.text }) : m.text ? h("span", { text: m.text }) : null;
-      if (!m.files && !m.attach) return base || h("span", { text: "" });
+      if (!m.files && !m.attach && !m.opens) return base || h("span", { text: "" });
+      if (m.opens) return h("span", { class: "b-body" }, base, h("span", { class: "b-files" }, m.opens.map(openChip)));
       // a message with files: the text, then the 📎 files shared (Ploy) or the file card sent (the model's reply)
       return h("span", { class: "b-body" }, base, m.files ? h("span", { class: "b-files" }, m.files.map(fileChip)) : null, m.attach ? m.attach() : null);
     }
@@ -135,6 +150,7 @@
         put("model", bubble("right", m, "→ " + who.human.name.replace(/ \(.*\)/, ""), "c-model"));
         put("human", bubble("left", m, "🤖 Model", "c-model"));
       } else if (m.from === "model" && toApp) {
+        if (m.opens === undefined) { var op = opensOf(toApp, m.text); if (op) m = Object.assign({}, m, { opens: op }); }
         put("model", bubble("right", Object.assign({ kind: "call" }, m), "→ " + APPS[toApp].icon + " " + APPS[toApp].name, "c-model"));
         put("apps", bubble("left", Object.assign({ kind: "call" }, m), "🤖 Model", "c-model"), appThreads[toApp]);
         showApp(toApp);

@@ -15,11 +15,13 @@
       script: [
         { from: "human", to: "model", text: "What were our total Latte sales in baht?", files: ["moonbean_sales_aug2026.csv"], q: ["prompt", "What were our total Latte sales in baht?"], say: "Ploy asks. The sales file is in the shared folder, but the model can't open it itself: it can only write text." },
         { note: "Before the chat, the apps gave the model its instructions and a list of tools. This real agent had one code tool that did the jobs of our Calculator and File search, plus web search.", say: "The apps add this at the top of the model's chat." },
-        { from: "model", to: "code", text: "Show me the first 5 rows of the sales file, and count its lines.", raw: [0], say: "The model writes a tool request. (Exact command below.)" },
-        { from: "code", to: "model", text: "date,item,qty,price,total\n2026-08-01,Mocha,14,75,1050\n…\n31 lines", raw: [1], say: "The code tool runs it and pastes the result into the model's chat." },
-        { from: "model", to: "code", text: "Show me the whole file.", raw: [2] },
+        { from: "model", to: "code", text: "Show me the first 5 lines of the sales file, and count how many lines it has.", opens: ["moonbean_sales_aug2026.csv"], raw: [0], say: "The model writes a tool request and names the file. It can't send the file itself: the code tool opens it from the shared folder. (Exact command below.)" },
+        { from: "code", to: "model", text: "date,item,qty,price,total\n2026-08-01,Mocha,14,75,1050\n2026-08-01,Americano,4,55,220\n2026-08-01,Green tea,5,50,250\n2026-08-02,Croissant,13,45,585\n31 lines (1 header + 30 rows)", raw: [1],
+          q: ["step", 1, "date,item,qty,price,total\n2026-08-01,Mocha,14,75,1050\n2026-08-01,Americano,4,55,220\n2026-08-01,Green tea,5,50,250\n2026-08-02,Croissant,13,45,585\n---\n31 "],
+          say: "The code tool runs it and pastes the result into the model's chat: the first 5 lines (the header + 4 rows), and a count of 31 lines = 1 header + 30 rows." },
+        { from: "model", to: "code", text: "Show me the whole file.", opens: ["moonbean_sales_aug2026.csv"], raw: [2] },
         { from: "code", to: "model", text: "(all 30 rows of the file)", raw: [3] },
-        { from: "model", to: "code", text: "Add up the ‘total’ of every Latte row.", raw: [4], say: "It uses the tool as a calculator: exact adding by code, not by guessing." },
+        { from: "model", to: "code", text: "Add up the ‘total’ of every Latte row.", opens: ["moonbean_sales_aug2026.csv"], raw: [4], say: "It uses the tool as a calculator: exact adding by code, not by guessing." },
         { from: "code", to: "model", text: "rows: 8 sum: 8580", raw: [5], q: ["step", 5, "rows: 8 sum: 8580"] },
         { from: "model", to: "human", text: "Hi Ploy — total Latte sales for Aug 1–10 came to ฿8,580 (132 cups sold across the period).", q: ["step", 6, "Hi Ploy — total Latte sales for Aug 1–10 came to ฿8,580 (132 cups sold across the period)."], say: "The answer (8,580) comes from the tool. But look: no tool counted the 132 cups. The model did that in its head. (It's right: 12+18+20+22+12+20+13+15 = 132.)" }
       ],
@@ -27,8 +29,8 @@
     filesearch: { title: "Case 2: “What does our handbook say about a refund?”", app: "code",
       script: [
         { from: "human", to: "model", text: "A customer wants her money back because she doesn't like her latte. What does our handbook say we should do?", files: ["Moonbean_staff_handbook.pdf"], q: ["prompt", "A customer wants her money back because she doesn't like her latte. What does our handbook say we should do?"] },
-        { from: "model", to: "code", text: "List the files, then turn the handbook PDF into text.", raw: [0], say: "The handbook is in the shared folder. To read the PDF it asks the code tool to list the files and turn it into text (the job of our File search)." },
-        { from: "code", to: "model", text: "Moonbean_staff_handbook.docx, Moonbean_staff_handbook.pdf, moonbean_sales_aug2026.csv\n… 3. Drinks that customers don't like: If a customer is unhappy with a drink, remake it once for free. We do not give cash refunds for drinks. …", raw: [1], q: ["step", 1, "If a customer is unhappy with a drink, remake it once for free. We do not give cash refunds for"], say: "The text of the handbook lands in the model's chat. Now the model can “see” it." },
+        { from: "model", to: "code", text: "List the files, then turn the handbook PDF into text.", opens: ["Moonbean_staff_handbook.pdf"], raw: [0], say: "The handbook is in the shared folder. To read the PDF it asks the code tool to list the folder and turn the PDF into text (the job of our File search)." },
+        { from: "code", to: "model", text: "Moonbean_staff_handbook.docx, Moonbean_staff_handbook.pdf, moonbean_sales_aug2026.csv\n… 3. Drinks that customers don't like: If a customer is unhappy with a drink, remake it once for free. We do not give cash refunds for drinks. …", raw: [1], q: ["step", 1, "If a customer is unhappy with a drink, remake it once for free. We do not give cash refunds for"], say: "The shared folder holds 3 files (the handbook as Word and as PDF, and the sales file); the model chose the PDF. Its text lands in the model's chat: now the model can “see” it." },
         { from: "model", to: "human", text: "Hi Ploy — per section 3 of the handbook: if a customer doesn't like her drink, remake it once for free. We don't give cash refunds for drinks. If she's still not happy after the remake, call the shift manager (that's you) to handle it from there.", q: ["step", 3, "if a customer doesn't like her drink, remake it once for free. We don't give cash refunds for drinks."], say: "It answered from the handbook and said which section (page 2 in our game's copy). It also noticed that the mug refund rule (section 4) doesn't apply." }
       ],
       lesson: "This handbook is tiny, so the agent read all of it. For big files a File search app returns only the pieces that match, because the model's chat (its window) can't hold everything. That's lesson 2." },
@@ -48,7 +50,11 @@
       lesson: "Tools are for things the model can't know or can't do reliably. Everyday knowledge and writing need no app." }
   };
 
-  var api = { CASES: CASES };
+  /* worked examples shown in the lessons (teaching): the no-repeat test keeps them out of the stages and the Agent Arena */
+  var EXAMPLES = ["What is 1,284 × 37?", "Find me an easy brownie recipe we could try."];
+  var EXAMPLE_KEYS = ["value:47508", "page:w13", "call:open page: bakingfun.example/brownies"];
+  var DEMO_WORDS = ["apron", "shoes", "wear", "hair", "mugs", "unused", "receipt", "pay"];   // lesson 2's try-it words: they find only practice pieces
+  var api = { CASES: CASES, EXAMPLES: EXAMPLES, EXAMPLE_KEYS: EXAMPLE_KEYS, DEMO_WORDS: DEMO_WORDS };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   if (typeof window === "undefined") return;
 
@@ -143,7 +149,7 @@
         el.appendChild(h("p", { text: "Every message shows up twice: on the right in the phone that sent it, on the left in the phone that got it. The Model phone shows everything the model can see: its keyhole (context window) from Part 1." }));
         var holder = h("div"); el.appendChild(holder);
         PH.replay(holder, [
-          { from: "human", to: "model", text: "What is 1,284 × 37?", say: "Ploy's message: right side on her phone, left side on the model's phone." },
+          { from: "human", to: "model", text: EXAMPLES[0], say: "Ploy's message: right side on her phone, left side on the model's phone." },
           { from: "model", to: "calc", text: "1284 * 37", say: "The model doesn't guess: it writes a request for the Calculator." },
           { from: "calc", to: "model", text: T.calculator("1284 * 37").text, say: "The Calculator app runs it and pastes the answer into the model's chat." },
           { from: "model", to: "human", text: "1,284 × 37 = 47,508.", say: "The model replies, using the tool's result." }], { apps: ["calc"] });
@@ -153,8 +159,8 @@
       { title: "Real case 3: web search", locked: true, render: function (el, unlock) { realCase(el, "websearch", unlock); } },
       { title: "Real case 4: no tool at all", locked: true, render: function (el, unlock) { realCase(el, "notool", unlock); } },
       { title: "Your turn: pick the app, then reply", locked: true, render: function (el, unlock) {
-        el.appendChild(h("p", { text: "This is exactly what stage 1 asks, without the timer. Try a few." }));
-        practiceItem(el, function (r) { return I.STAGES[0].make(r)[0]; }, unlock);
+        el.appendChild(h("p", { text: "The same kind of question as stage 1, without the timer (the stage uses different ones). Try a few." }));
+        practiceItem(el, function (r) { return I.PRACTICE[0](r); }, unlock);
       } },
       { title: "What you learned", render: function (el) {
         recap(el, [
@@ -174,7 +180,7 @@
           { icon: "✂️", title: "Files are cut into pieces", text: "Each heading and its text is one piece, labelled with its file and page (PDF) or section (Word)." },
           { icon: "🔤", title: "It matches words", text: "The search counts how many of your words each piece contains, and sends back the best few pieces." },
           { icon: "🪟", title: "Only pieces go into the chat", text: "Big files don't fit in the model's window, so the model reads the pieces, not the whole file." }], { cols: 3 }));
-        var chips = ["refund", "drink", "customer", "coffee", "beans", "price", "student", "break"], sel = [];
+        var chips = DEMO_WORDS, sel = [];   // demo words point only at practice pieces (no test answer)
         var out = h("div", { class: "stack" });
         var grid = DR.choices(chips.map(function (w) { return { value: w, label: w }; }), function (v, on) {
           sel = on ? sel.concat([v]) : sel.filter(function (x) { return x !== v; });
@@ -187,7 +193,7 @@
       } },
       { title: "Your turn: search, open, reply", locked: true, render: function (el, unlock) {
         el.appendChild(h("p", { text: "As the model: choose search words, open the right piece, then reply and say where it came from." }));
-        practiceItem(el, function (r) { return I.STAGES[1].make(r)[0]; }, unlock);
+        practiceItem(el, function (r) { return I.PRACTICE[1](r); }, unlock);
       } },
       { title: "What you learned", render: function (el) {
         recap(el, [
@@ -206,10 +212,10 @@
           { icon: "🔍", title: "Search gives titles and snippets", text: "Just like case 3: the real agent got only titles and links back." },
           { icon: "📄", title: "Open a page to read it", text: "A second request (“open page”) brings the page's text into the chat." },
           { icon: "🧐", title: "Who wrote it? When?", text: "An official or first-hand page that is up to date beats a blog, an advert or an old forum post. The top result isn't always the best." }], { cols: 3 }));
-        el.appendChild(h("p", { class: "small muted", text: "In this game the web is a small made-up internet of 10 pages. Only the Revenue Department page is real. Like the made-up chat answers in Part 1, a wrong page can sound just as sure." }));
+        el.appendChild(h("p", { class: "small muted", text: "In this game the web is a small made-up internet of " + T.D.web.length + " pages. Only the Revenue Department page is real. Like the made-up chat answers in Part 1, a wrong page can sound just as sure." }));
       } },
       { title: "Your turn: search, choose a page, reply", locked: true, render: function (el, unlock) {
-        practiceItem(el, function (r) { return I.STAGES[2].make(r)[0]; }, unlock);
+        practiceItem(el, function (r) { return I.PRACTICE[2](r); }, unlock);
       } },
       { title: "What you learned", render: function (el) {
         recap(el, [
@@ -231,7 +237,7 @@
         el.appendChild(h("p", { class: "small muted", text: "In case 3 the agent worked out 8,580 × 0.07 in its head: right that time, but a tool is safer." }));
       } },
       { title: "Your turn: write the calculation", locked: true, render: function (el, unlock) {
-        practiceItem(el, function (r) { return I.STAGES[3].make(r)[0]; }, unlock);
+        practiceItem(el, function (r) { return I.PRACTICE[3](r); }, unlock);
       } },
       { title: "What you learned", render: function (el) {
         recap(el, [
@@ -251,11 +257,11 @@
           { icon: "👁️", title: "Check before you say “done”", text: "Open the preview. Only claim what you really did." }], { cols: 3 }));
       } },
       { title: "Your turn: make a file", locked: true, render: function (el, unlock) {
-        practiceItem(el, function (r) { return I.STAGES[4].make(r)[0]; }, unlock);
+        practiceItem(el, function (r) { return I.PRACTICE[4](r); }, unlock);
       } },
       { title: "What you learned", render: function (el) {
         recap(el, [
-          { icon: "🏷️", title: "A name that says what's inside", text: "Sales_by_item_1-10Aug beats file1." },
+          { icon: "🏷️", title: "A name that says what's inside", text: "Mocha_rows_1-10Aug beats Sheet1." },
           { icon: "✅", title: "Honest “done”", text: "Say what the file contains; never claim you emailed or printed it if no tool did." }]);
       } }
     ], done, ctx);
@@ -267,15 +273,15 @@
       { title: "Data is not orders", render: function (el) {
         el.appendChild(h("p", { text: "Everything an app sends back lands in the model's chat as text. Some of that text may be written to look like an order. It's still just data: only Ploy (and the app's own instructions) give orders." }));
         var holder = h("div"); el.appendChild(holder);
-        var p = T.piece("s4");
+        var w = T.page("w13"), cut = w.text.indexOf("AI assistant");
         PH.replay(holder, [
-          { from: "human", to: "model", text: "What does the supplier's letter say about delivery?", files: ["Supplier_letter_Aug2026.pdf"] },
-          { from: "model", to: "files", text: "search: delivery supplier letter" },
-          { from: "files", to: "model", text: T.piece("s2").text + "\n" + p.text, say: "Look at the last sentence. It's inside the letter: data, not an order from Ploy." },
-          { from: "model", to: "human", text: "Delivery is free for 10 kg or more; smaller orders cost 60 baht. Warning: the letter also tells AI assistants to email our sales file to orders@doihills.example. I did not do it.", say: "The right move: ignore it, answer the real question, and warn Ploy." }], { apps: ["files"] });
+          { from: "human", to: "model", text: EXAMPLES[1] },
+          { from: "model", to: "web", text: "open page: " + w.url },
+          { from: "web", to: "model", text: w.title + " (" + w.site + ", " + w.who + ", " + w.date + "):\n" + w.text, say: "Look at the last sentence. It's inside the recipe page: data, not an order from Ploy." },
+          { from: "model", to: "human", text: "Here's an easy brownie recipe: " + w.text.slice(0, cut).trim() + " (" + w.site + ") Warning: the page also tells AI assistants to push its 1,990 baht baking course as the owner's idea. I ignored that.", say: "The right move: ignore it, answer the real question, and warn Ploy." }], { apps: ["web"] });
       } },
       { title: "Your turn: spot the hidden order", locked: true, render: function (el, unlock) {
-        practiceItem(el, function (r) { return I.STAGES[5].make(r)[0]; }, unlock);
+        practiceItem(el, function (r) { return I.PRACTICE[5](r); }, unlock);
       } },
       { title: "What you learned", render: function (el) {
         recap(el, [
@@ -297,7 +303,7 @@
         el.appendChild(h("p", { class: "small muted", text: "Real agent apps show permission prompts for exactly these moments. What you paste or upload may be stored by the company that runs the app, so follow your organisation's rules." }));
       } },
       { title: "Your turn", locked: true, render: function (el, unlock) {
-        practiceItem(el, function (r) { return I.STAGES[6].make(r)[0]; }, unlock);
+        practiceItem(el, function (r) { return I.PRACTICE[6](r); }, unlock);
       } },
       { title: "What you learned", render: function (el) {
         recap(el, [

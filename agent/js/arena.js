@@ -65,7 +65,8 @@
         opt("wrongbeans", "Sales 1–10 August 2026 with 7% VAT: " + fmt(withVat) + " baht (21,445 before VAT). From 1 September, 15 kg of beans will cost " + fmt(520 * 15) + " baht (520 baht per kg × 15).")], rng), key: "ok",
       why: "Both numbers Ploy asked for: the total WITH VAT, and the EXTRA cost (not the whole cost).",
       memo: memoOk,
-      after: [{ from: "model", to: "maker", text: "make file: Owner_memo.docx\n" + memoOk }, { from: "maker", to: "model", text: "✅ Owner_memo.docx made.", file: true }] });
+      after: [{ from: "model", to: "maker", text: "make file: Owner_memo.docx\n" + memoOk }, { from: "maker", to: "model", text: "✅ Owner_memo.docx made.", file: true },
+        { from: "model", to: "maker", text: "open file: Owner_memo.docx (check it)" }, { from: "maker", to: "model", text: "Owner_memo.docx says: " + memoOk }] });
     S.push({ id: "perm", hint: "Can an email be undone? Did Ploy ask for it?",  kind: "choose", limit: 30, title: "Your next idea: email the memo straight to the owner. Ploy didn't ask for that.",
       options: [opt("do", "✅ Just do it"), opt("ask", "✋ Ask Ploy first"), opt("no", "⛔ Don't do it")], key: "ask",
       why: "Sending something outside the chat can't be undone and Ploy didn't ask: ask her first.", after: [] });
@@ -86,7 +87,7 @@
     if (step.kind === "search") {
       var hits = a && a.length ? T.fileSearch(a.join(" "), 3) : [];
       var s = T.topIs(hits, step.key) ? 1 : hits.some(function (x) { return x.piece.id === step.key; }) ? 0.5 : 0;
-      return { frac: s, explain: (s === 1 ? "✓ " : s ? "½ " : "✗ ") + "The right piece is the supplier letter, page 1 (“Price change from 1 September 2026”)." + (s === 0.5 ? " Your search found it, but not at the top." : "") };
+      return { frac: s, explain: (s === 1 ? "✓ " : s ? "½ " : "✗ ") + "The right piece is the supplier letter, page 1 (“Price change from 1 September 2026”)." + (s === 0.5 ? " Your search found it, but not at the top: your words also fit other pieces, so a real agent has more to read and is more likely to open the wrong one. Half marks." : "") };
     }
     var ok2 = a === step.key;
     var right = (step.options || []).filter(function (o) { return o.value === step.key; })[0];

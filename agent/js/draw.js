@@ -172,7 +172,7 @@
       var r = it.run(ans.tokens);
       P.add({ from: "model", to: "calc", text: ans.tokens.join(" ") });
       P.add({ from: "calc", to: "model", text: r.text });
-      step2.appendChild(move(2, "Reply to Ploy.", (c2 = choices(it.replies, function (v) { ans.reply = v; P.add({ from: "model", to: "human", text: "It's " + T.fmt(Number(v)) + " baht." }); api.submit(ans); })).el));
+      step2.appendChild(move(2, "Reply to Ploy.", (c2 = choices(it.replies, function (v) { ans.reply = v; P.add({ from: "model", to: "human", text: "It's " + T.fmt(Number(v)) + " " + (it.unit || "baht") + "." }); api.submit(ans); })).el));
     });
     box.appendChild(move(1, "Write your request to the Calculator.", h("div", { class: "stack" }, line, tiles, h("div", { class: "row" }, undo, h("span", { style: "flex:1" }), send))));
     box.appendChild(step2);
@@ -197,10 +197,15 @@
       send.disabled = true;
       var f = it.make(ans);
       var label = it.contents.filter(function (x) { return x.value === ans.content; })[0].label;
-      P.add({ from: "model", to: "maker", text: "make file: " + f.name + "\ncontents: " + label });
-      P.add({ from: "maker", to: "model", text: "", el: fileCard(f, "made by the File maker") });
+      var C = root.AGENT_ITEMS.CONTENTS[ans.content], src = C.source || T.D.salesFile, table = !!C.rows && ans.type !== "docx";
+      var n = C.rows ? C.rows().length - 1 : 0;
+      // instruct, then check: the model says what to take from which file; the app reports what it made; the model opens it to check
+      P.add({ from: "model", to: "maker", text: "make file: " + f.name + " from " + src + "\ncontents: " + label });
+      P.add({ from: "maker", to: "model", text: "", el: function () { return h("span", { class: "b-body" }, h("span", { text: "✅ " + f.name + " made" + (table ? ": " + n + " row" + (n === 1 ? "" : "s") + " (+ a header row)." : ".") }), fileCard(f, "made by the File maker")()); } });
+      P.add({ from: "model", to: "maker", text: "open file: " + f.name + " (check it)" });
+      P.add({ from: "maker", to: "model", text: C.rows ? f.name + ": " + (table ? n + " rows under the header, starting “" + C.rows()[Math.min(1, n)].join(", ") + "”." : (n + 1) + " lines of text, starting “" + C.rows()[0].join(": ") + "”.") : f.name + " says: " + C.paragraphs.join(" ") });
       var replies = it.replies.map(function (x) { return { value: x.value, label: it.replyLabel(x.value, ans) }; });
-      step2.appendChild(move(2, "Check the file (👁 View here in your phone), then reply to Ploy.", (c4 = choices(replies, function (v) {
+      step2.appendChild(move(2, "You opened the file to check it (👁 View here in your phone too). Now reply to Ploy.", (c4 = choices(replies, function (v) {
         ans.reply = v; P.add({ from: "model", to: "human", text: replies.filter(function (x) { return x.value === v; })[0].label, attach: fileCard(f, "sent to Ploy") }); api.submit(ans);
       }, { oneCol: true })).el));
     });
