@@ -1,0 +1,41 @@
+/* Theme override: colors + font from the "Bai Jamjuree" lecture deck. Load AFTER arena.css and visual.css.
+   Layout, sizes, radii and structure are untouched.
+   The font is loaded by a <link> to Google Fonts in each page (faster than @import); if it is blocked, the system font is used. */
+
+:root {
+  --bg: #ffffff;
+  --surface: #ffffff;
+  --surface-2: #f2f4f6;
+  --ink: #1f1f1f;
+  --ink-2: #4a5058;
+  --ink-3: #5b6470;
+  --line: #e1e4e8;
+  --accent: #0070c0;
+  --accent-soft: #dcebf7;
+  --accent-ink: #ffffff;
+  --bar-track: #e6eaee;
+  --focus: #009fe3;
+  --shadow: 0 1px 2px rgba(31, 31, 31, .06), 0 4px 16px rgba(0, 60, 110, .06);
+  --font: "Bai Jamjuree", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "Courier New", ui-monospace, Consolas, monospace;
+}
+
+/* hard-coded colors in visual.css, re-mapped to the deck's neutrals and blues */
+.v-sheet th, .v-sheet td { border-color: #e1e4e8; }
+.v-sheet thead th, .v-sheet th.rn, .v-sheet-tabs, .v-doc-table th { background: #f2f4f6; }
+.v-sheet tr.hdr td { background: #f7f8fa; }
+.v-doc-table th, .v-doc-table td { border-color: #c9cfd6; }
+.b.right.c-app { background: #5b6470; }
+.b.right.c-human { background: #00739e; }
+.b.left.c-app { background: #eef0f2; }
+.b.left.c-human { background: #ddf1fa; }
+
+/* contrast fixes (WCAG AA, 4.5:1 for small text), same look:
+   - unread badge: white on #0070c0 = 5.15:1 (#009fe3 would be 2.97:1)
+   - small blue text on light blue (Part A/B chips): #005a9c on #dcebf7 = 5.87:1 (#0070c0 would be 4.23:1)
+   - "part marks" result border stays amber, so it does not look like the blue accent */
+.ph-badge { background: #0070c0; }
+.part-chip { color: #005a9c; }
+.result-card.part { border-left-color: #f0a020; }
+/* - sender name on the coloured (right-hand) bubbles: full white, not 80% (80% gives 3.86:1 on #0070c0) */
+.b.right .b-from { opacity: 1; }
