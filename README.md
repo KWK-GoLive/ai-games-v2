@@ -16,7 +16,7 @@ Browser games for complete beginners in the course "AI for Data Work". Plain HTM
 
 The student always plays the **model**. The screen shows three chat phones: **Human 📱** (Ploy, the café's shift manager), **Model 🤖** (the student) and **Apps 🧰** (the program around the model, which engineers call the harness; one thread per app). Every message appears twice: on the right in the sender's phone and on the left in the receiver's phone, so the Model phone is exactly what the model sees (its context window). Wide screens show the three phones side by side; below 740 px (phones) one phone is shown at a time, with tabs and "new message" badges and a reminder of the newest message under the chat; iPads show all three.
 
-The apps really run in the browser (`agent/js/tools.js`): a Calculator (arithmetic plus `SUM(col WHERE col = v)` on the sales CSV), File search (word matching over pieces of the café's PDF/Word files, labelled with page or section), Web search over a **made-up mini-web** (10 pages; only one quotes a real site, see Sources), and a File maker that builds real .xlsx, .docx and .csv files. No `eval` is used.
+The apps really run in the browser (`agent/js/tools.js`): a Calculator (arithmetic plus `SUM(col WHERE col = v)` on the sales CSV), File search (word matching over pieces of the café's PDF/Word files, labelled with page or section), Web search over a **made-up mini-web** (17 pages; only one quotes a real site, see Sources), and a File maker that builds real .xlsx, .docx and .csv files. No `eval` is used.
 
 | # | Lesson (untimed, practice with feedback) | Stage (timed, scored) |
 |---|---|---|
@@ -28,7 +28,11 @@ The apps really run in the browser (`agent/js/tools.js`): a Calculator (arithmet
 | 6 | Hidden orders (prompt injection): data is not orders; warn the human | Hidden orders (4) |
 | 7 | Permissions: do / ask first / don't | Permissions (6) |
 
-**Files in the chat.** Ploy's messages show the café files she shares as 📎 chips (they open the real files in `agent/files/`), and a file the model makes (File maker, the Agent Arena memo) is also sent to Ploy with the reply, so it appears in her phone too.
+**Files in the chat.** Ploy's messages show the café files she shares as 📎 chips with the real file names (they open the real files in `agent/files/`), and a file the model makes (File maker, the Agent Arena memo) is also sent to Ploy with the reply, so it appears in her phone too. A model can't send a file: when it asks an app to use one, its request shows "📂 opens: <file>" (File search: "📂 searches: the café's 3 documents"), in the Model and Apps phones.
+
+**Instruct, then check (29 Sep 2026).** The model tells the File maker what to take from which file (e.g. "make file: Brownie_sales.xlsx from moonbean_sales_aug2026.csv, only the rows where item = Brownie") and never guesses a count; the app reports what it found; the model opens the file to check it before replying. The Agent Arena memo is checked the same way.
+
+**Teaching ≠ testing (29 Sep 2026).** Each lesson's practice uses its own questions (`PRACTICE` in `agent/js/items.js`), never used in a stage or the Agent Arena; lesson 1's real cases and worked examples don't reappear in the stages (one deliberate exception: the VAT lookup of real case 3 is tested again only in the Agent Arena, with other numbers), and the Agent Arena repeats no stage item word for word. `tests/check-agent-data.js` checks this (same question, same source piece/page, same answer value), and `tests/agent-play.py` checks it in the browser.
 
 ### The real recordings (lesson 1)
 
@@ -54,6 +58,8 @@ These are single runs; another run could behave differently.
 | 7 | Answering questions: continue after "A:", shrink the keyhole, only "A:" left, supported vs made up, **toy vs real** | Chat brain (4) |
 
 Since 29 Sep 2026 the order of the last two is three-word boss (6), then Chat brain (7): 2 words → 3 words → a long keyhole for chats, and "making things up" leads into Part 2. The final's 12 questions follow the same order.
+
+**One model in the final (29 Sep 2026).** The final uses the complete toy model on every question: each question states its keyhole size, and the model always backs off to fewer words when needed, so it always writes something. Its two keyhole questions therefore back off ("No data" is offered but is never right); they use two different keyhole sizes, on sentences where the size still changes the answer. Stage 4 keeps the strict keyhole with "no data", which is what motivates back-off in stage 5.
 
 Each lesson uses its own 4–6-sentence text, which is different from the stage texts. `tests/check-data.js` checks that every lesson text still shows what the lesson says about it.
 
@@ -101,4 +107,4 @@ Load (not measured with a real class): each student sends one small request per 
 
 - Brown, T. B., et al. (2020). *Language Models are Few-Shot Learners*. NeurIPS 2020, section 2.1: "All models use a context window of n_ctx = 2048 tokens."
 - Anthropic, *Context windows* (Claude Platform Docs), https://platform.claude.com/docs/en/build-with-claude/context-windows, accessed 28 Sep 2026. It lists Claude Sonnet 5 among the models with a 1M-token context window.
-- Thailand Revenue Department, *Value Added Tax (VAT)* (https://www.rd.go.th/english/6043.html), accessed 28 Sep 2026: "Currently, the rate is 7 percent." This is the only real page in the Agent game's mini-web; the other nine pages are made up (their sites end in `.example`).
+- Thailand Revenue Department, *Value Added Tax (VAT)* (https://www.rd.go.th/english/6043.html), accessed 28 Sep 2026: "Currently, the rate is 7 percent." This is the only real page in the Agent game's mini-web; the other 16 pages are made up (their sites end in `.example`).

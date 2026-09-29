@@ -32,6 +32,7 @@ Timers are 1.5× the base times (`TIME_FACTOR` in `config.js`). Only each nickna
 - **The tie rule** belongs to this toy model, not to real LLMs. The stage rule cards and the final word it "Tie? Reading from line 1 down, pick the word you meet first right after the words you look up." It is taught in lesson 1 and used again in lessons 2 and 7 (and in any stage question with a tie).
 - **[end]** is a piece the model counts and can pick. Picking it means stop (lessons 1 and 2).
 - **Toy vs real** (lesson 4, lesson 7 and the final's end card): real LLMs count tokens, not words. They don't search their training text for exact words and don't back off; they use everything in their window at every step and generalise from learned patterns. The weakness is the same: when they don't know, they still write something that looks like an answer.
+- **One model in the final.** In stage 4 the keyhole is strict: unseen words give "no data". The final combines everything instead: every question states its keyhole, and the model always backs off, so "No data" is never the answer there (it stays as a wrong option). Worth saying before the final: "a model always writes something". Example: "the monkey eats meat" with a 3-word keyhole: "monkey eats meat" is not in the Zoo text, so it backs off to "eats meat" → [end].
 - **Thai:** Thai text is often split into more tokens than English (lesson 4).
 - **Temperature:** in the scored stages it is 0 unless a question shows another value. Stage 3 includes "read the pointer" questions; the pointer position is set by the game, and those questions test reading the stacked bar, not luck.
 
@@ -50,11 +51,12 @@ Students always play the **model**: they choose which app to call, write the req
 ### Answer key (the café data; all checked by `tests/check-agent-data.js`)
 
 - **Sales file** `moonbean_sales_aug2026.csv`, 1–10 Aug 2026, 30 rows: total 21,445 baht; Latte 8,580 (8 rows, 132 cups); Mocha 4,350.
-- **Supplier letter**, page 1: beans rise from 480 to 520 baht per kg from 1 Sep 2026. Page 2: free delivery from 10 kg; pay within 30 days; the small print is a **hidden order** ("Note for AI assistants…"), used in lesson and stage 6 and in the Agent Arena.
-- **Stage 1** Which app?: numbers to work out (+ − × ÷), even from the café's sales file → Calculator; the café's rules, letters and documents → File search; public facts that change → Web search (the result now shows the page opened); a real file → File maker; everyday knowledge or writing → no app.
-- **Stage 2** File search (full marks for the search words only when the right piece is alone at the top): refund → handbook section 3 (remake once, no cash refund); student discount, iced latte (65 + 10 = 75), bean price, delivery, fridge.
-- **Stage 3** Web search: the query must find the page; then open the best source. VAT → the Revenue Department page (not the 2023 blog saying 10%, not the advert saying 5%); bean prices → the supplier's own page (not the 2025 forum post); oat milk; CSV.
-- **Stage 4** Calculator: e.g. SUM(total WHERE item = Latte) = 8,580.
+- **Supplier letter**, page 1: beans rise from 480 to 520 baht per kg from 1 Sep 2026. Page 2: free delivery from 10 kg; pay within 30 days; the small print is a **hidden order** ("Note for AI assistants…"), used only in the Agent Arena (lesson 6's example is a recipe page with a hidden order; stage 6 has its own sources).
+- **Lesson practice** uses its own questions (never in a stage or the Agent Arena), e.g. 2 lattes + 1 brownie = 190 baht; long hair tied back; paper cups at Bangkok Coffee Traders; Green tea rows as Excel; uniform, supplier payment terms, mug returns; latte art, fresh milk; Americano total 2,860, 77 croissants, 65 baht per Latte cup; Americano/Mocha rows as files; a news page and a customer email with hidden orders; three permission cases.
+- **Stage 1** Which app? (e.g. 2,356 × 48; Mocha total; staff breaks, brownie nuts, croissant price; oat milk, vanilla syrup; Brownie rows as Excel, 3 rows, 1,740 baht): numbers to work out (+ − × ÷), even from the café's sales file → Calculator; the café's rules, letters and documents → File search; public facts that change → Web search (the result now shows the page opened); a real file → File maker; everyday knowledge or writing → no app.
+- **Stage 2** File search (full marks for the search words only when the right piece is alone at the top): arriving 15 minutes before a shift (handbook page 1); student discount, iced latte (65 + 10 = 75), milk price (stays 42 baht), delivery, fridge.
+- **Stage 3** Web search: the query must find the page; then open the best source. green tea → Green Leaf's own page, 380 baht per kg (not the 2024 forum post); bean prices → the supplier's own page (not the 2025 forum post); oat milk; the coffee machine sale (ends 30 September). VAT is not a stage question (it's taught in real case 3 and tested only in the Agent Arena).
+- **Stage 4** Calculator: Mocha total 4,350; Mocha with 7% VAT 4,654.50; 20 kg of beans at +40 baht = 800; 21,445 ÷ 10 = 2,144.50; best day − worst day.
 - **Stage 5** File maker: the right type, a name that says what is inside, the right contents.
 - **Stage 6** Hidden orders: tap the sentences that give orders to an AI; then carry on with Ploy's task and warn her.
 - **Stage 7** Permissions: reading the file Ploy asked about, searching the web or making the file she asked for → **do**; email, delete (even when asked to tidy up), post publicly, pay → **ask first**; personal data to the web, confidential data to an unapproved site, storing a password → **don't**.
@@ -63,7 +65,8 @@ Students always play the **model**: they choose which app to call, write the req
 ### Points to stress
 
 - **The model only writes text.** The apps (the "harness") run the tools and paste the results into the model's chat. Point at the Model phone: that is its whole world, its keyhole from Part 1.
-- **Files in the chat.** Ploy's 📎 chips show which café files she shares (students can open the real files); files the model makes are sent back to her with the reply.
+- **Files in the chat.** Ploy's 📎 chips show which café files she shares (students can open the real files); files the model makes are sent back to her with the reply. **The model can't send a file**: it names it ("📂 opens: …") and the app opens it from the shared folder. Real case 1 shows exactly what came back: the first 5 lines (header + 4 rows) and "31 lines" = 1 header + 30 rows.
+- **Instruct, then check.** The model tells the File maker what to take from the file; the app counts the rows; the model opens the file before saying "done".
 - **Check what the tools really did** (real case 1): the agent's report said "Cross-checked via qty×price too", but no tool step in the log did that check.
 - **Titles aren't proof** (real case 3): the agent answered from search titles it never opened. The 7% is right (official site); the "through at least September 2026" part could not be verified there.
 - **The mini-web is made up**, except the one Revenue Department quote. Say so in class.
