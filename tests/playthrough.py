@@ -36,12 +36,30 @@ def new_ctx(browser, factor=1.5, viewport=None):
     ctx = browser.new_context(viewport=viewport or {"width": 1100, "height": 900})
     body = f'window.AIG_CONFIG = {{ SCOREBOARD_URL: "{MOCK_URL}", BOARD_REFRESH_SECONDS: 3, TIME_FACTOR: {factor} }};'
     ctx.route("**/config.js", lambda r: r.fulfill(status=200, content_type="application/javascript", body=body))
+    # the test machine can't reach Google Fonts: answer with an empty stylesheet, so the locally installed
+    # Bai Jamjuree (if any) is used and no network error is logged
+    ctx.route("https://fonts.googleapis.com/**", lambda r: r.fulfill(status=200, content_type="text/css", body=""))
     return ctx
 def new_page(ctx):
     page = ctx.new_page(); page.errors = []
     page.on("pageerror", lambda e: page.errors.append(str(e)))
     page.on("console", lambda m: page.errors.append("console: " + m.text) if m.type == "error" else None)
     return page
+
+THEMED = ["index.html", "board.html", "teacher.html", "llm/index.html", "final/index.html", "warmup/index.html", "agent/index.html", "agent-final/index.html"]
+def theme_check(page, base):
+    """every page loads the Chula theme after the other stylesheets and uses its font and blue"""
+    for p in THEMED:
+        page.goto(base + "/" + p); page.wait_for_timeout(150)
+        r = page.evaluate("""() => { const l = [...document.querySelectorAll('link[rel=stylesheet]')].map(x => x.getAttribute('href'));
+          const cs = getComputedStyle(document.body);
+          return { last: l[l.length - 1], font: cs.fontFamily, accent: getComputedStyle(document.documentElement).getPropertyValue('--accent').trim(),
+                   has: document.fonts.check('16px "Bai Jamjuree"') }; }""")
+        check(r["last"].endswith("shared/theme-chula.css"), f"{p}: theme-chula.css is the last stylesheet ({r['last']})")
+        check(r["font"].startswith('"Bai Jamjuree"'), f"{p}: font is Bai Jamjuree ({r['font']})")
+        check(r["accent"].lower() == "#0070c0", f"{p}: accent is #0070c0 ({r['accent']})")
+        check(r["has"], f"{p}: Bai Jamjuree is available (installed or loaded), so widths are the real ones")
+    print("  theme checked on", len(THEMED), "pages")
 
 def no_hscroll(page, what):
     w = page.evaluate("document.documentElement.scrollWidth - document.documentElement.clientWidth")
@@ -118,6 +136,7 @@ with sync_playwright() as p:
     br = p.chromium.launch()
     # ---------- front page ----------
     ctx = new_ctx(br); page = new_page(ctx)
+    theme_check(page, BASE)
     page.goto(BASE + "/index.html")
     page.fill("#p-nick", "Ann"); page.fill("#p-team", "Red"); page.fill("#p-class", "t1"); page.click("#signin-body button[type=submit]")
     check("Playing as Ann" in page.locator("#signin-body").inner_text(), "front-page sign-in saved")
