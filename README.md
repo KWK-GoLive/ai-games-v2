@@ -14,7 +14,7 @@ Browser games for complete beginners in the course "AI for Data Work". Plain HTM
 
 ## Part 2: Be the Agent (three linked chat phones)
 
-The student always plays the **model**. The screen shows three chat phones: **Human 📱** (Ploy, the café's shift manager), **Model 🤖** (the student) and **Apps 🧰** (the harness, one thread per app). Every message appears twice: on the right in the sender's phone and on the left in the receiver's phone, so the Model phone is exactly what the model sees (its context window). Wide screens show the three phones side by side; below 740 px (phones) one phone is shown at a time, with tabs and "new message" badges and a reminder of the newest message under the chat; iPads show all three.
+The student always plays the **model**. The screen shows three chat phones: **Human 📱** (Ploy, the café's shift manager), **Model 🤖** (the student) and **Apps 🧰** (the program around the model, which engineers call the harness; one thread per app). Every message appears twice: on the right in the sender's phone and on the left in the receiver's phone, so the Model phone is exactly what the model sees (its context window). Wide screens show the three phones side by side; below 740 px (phones) one phone is shown at a time, with tabs and "new message" badges and a reminder of the newest message under the chat; iPads show all three.
 
 The apps really run in the browser (`agent/js/tools.js`): a Calculator (arithmetic plus `SUM(col WHERE col = v)` on the sales CSV), File search (word matching over pieces of the café's PDF/Word files, labelled with page or section), Web search over a **made-up mini-web** (10 pages; only one quotes a real site, see Sources), and a File maker that builds real .xlsx, .docx and .csv files. No `eval` is used.
 
@@ -27,6 +27,8 @@ The apps really run in the browser (`agent/js/tools.js`): a Calculator (arithmet
 | 5 | File maker: type, name, contents, preview; honest "done" | File maker (3, real downloads) |
 | 6 | Hidden orders (prompt injection): data is not orders; warn the human | Hidden orders (4) |
 | 7 | Permissions: do / ask first / don't | Permissions (6) |
+
+**Files in the chat.** Ploy's messages show the café files she shares as 📎 chips (they open the real files in `agent/files/`), and a file the model makes (File maker, the Agent Arena memo) is also sent to Ploy with the reply, so it appears in her phone too.
 
 ### The real recordings (lesson 1)
 
@@ -43,13 +45,15 @@ These are single runs; another run could behave differently.
 
 | # | Lesson (untimed, unscored practice with instant feedback) | Stage (timed, scored) |
 |---|---|---|
-| 1 | Counting: count → %, [end] is counted too, temperature 0 = top count, tie = first seen right after the word | Count it (5 items) |
-| 2 | Writing with a 1-word window; [end] stops the sentence | Greedy writer (3) |
+| 1 | Counting: count → %, [end] counts like a word, temperature 0 = top count (no randomness), tie = reading from line 1 down, the word met first right after the looked-up words | Count it (5 items) |
+| 2 | Writing with a 1-word keyhole; [end] stops the sentence | Greedy writer (3) |
 | 3 | Temperature: the stacked bar, the spinning pointer, and a **temperature calculator** (slider 0 / 0.5 / 1 / 2 / 5, counts you can change) | Temperature (5): "predict" questions and "read the pointer" questions |
 | 4 | The keyhole (context window): 1, 2 and 3 words, "no data", and **real window sizes** (see Sources) | Keyhole (6) |
-| 5 | Two-word window plus back-off to 1 word | **Two-word boss** (3 whole continuations; large "2-WORD WINDOW" badge) |
-| 6 | Answering questions: continue after "A:", shrink the keyhole, only "A:" left, supported vs made up, **toy vs real** | Chat brain (4) |
-| 7 | Up to 3 words: the longest keyhole with data wins (3 → 2 → 1), plus an unscored temperature slider | **Three-word boss** (6 single next-word questions) |
+| 5 | Two-word keyhole plus back-off to 1 word | **Two-word boss** (3 whole continuations; large "2-WORD KEYHOLE" badge) |
+| 6 | Up to 3 words: the longest keyhole with data wins (3 → 2 → 1) | **Three-word boss** (6 single next-word questions) |
+| 7 | Answering questions: continue after "A:", shrink the keyhole, only "A:" left, supported vs made up, **toy vs real** | Chat brain (4) |
+
+Since 29 Sep 2026 the order of the last two is three-word boss (6), then Chat brain (7): 2 words → 3 words → a long keyhole for chats, and "making things up" leads into Part 2. The final's 12 questions follow the same order.
 
 Each lesson uses its own 4–6-sentence text, which is different from the stage texts. `tests/check-data.js` checks that every lesson text still shows what the lesson says about it.
 
