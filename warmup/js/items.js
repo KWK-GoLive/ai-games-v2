@@ -34,8 +34,7 @@
       title: "The model read only these 5 sentences. What does it write after " + q(c.w) + "?",
       options: opts.map(function (w) { return { value: w, label: dw(w) }; }),
       grade: function (a) {
-        return { frac: a === key ? 1 : 0, explain: ["Right after " + q(c.w) + " the sentences have: " + counts + ". The model writes the word that came most often: " + q(key) + "." + (key === END ? " ([end] means the sentence stops there.)" : ""),
-          "That's the whole trick: a language model learns which word tends to come next. The main game shows you how, step by step."] };
+        return { frac: a === key ? 1 : 0, explain: ["Right after " + q(c.w) + " the sentences have: " + counts + ". The model writes the word that came most often: " + q(key) + "." + (key === END ? " ([end] means the sentence stops there.)" : "")] };
       },
       sample: function (r) { return opts[Math.floor(r() * opts.length)]; } };
   }

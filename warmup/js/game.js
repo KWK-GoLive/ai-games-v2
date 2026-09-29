@@ -28,7 +28,7 @@
     stages: [
       { id: "guess", icon: "🔮", name: "What comes next?", make: make,
         goal: "Read the 5 training sentences. Which word does the model write next?",
-        rules: ["The model has read ONLY the 5 sentences on the screen.", "It writes the word that most often came right after the word shown.", "The end of a sentence is a piece too: [end]."],
+        rules: ["The model has read ONLY the 5 sentences on the screen.", "It writes the word that most often came right after the word shown.", "The end of a sentence counts like a word: [end]."],
         lesson: "The model doesn't understand buses or dinner. It only counted which word came after which, and picked the most common one. The main game shows you exactly how, step by step." }
     ],
     finalCard: function () {
