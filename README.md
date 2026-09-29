@@ -70,6 +70,7 @@ Each lesson uses its own 4–6-sentence text, which is different from the stage 
 - `apps-script/Code.gs`: the scoreboard web app. **One sheet serves both sites.** v2 added the game IDs `warmup`, `llm2`, `llmfinal`, `agent2` and `agentfinal`, and a stage count per game.
 - `agent/`: Be the Agent Arena. `data/cafe.js` (the café's files as text, the mini-web), `data/raw.js` (the recordings), `js/tools.js` (the apps), `js/phones.js` (the 3 phones), `js/items.js` (stage items), `js/draw.js`, `js/lessons.js`, `js/stages.js`, `js/arena.js` (the Agent Arena's 12 steps). `files/`: the real files students can download.
 - `agent-final/`: the Agent Arena page.
+- `shared/theme-chula.css`: the Chula theme (colours and the Bai Jamjuree font from the lecture deck), loaded last in every page; layout is untouched. The font comes from Google Fonts by a `<link>` in each page; if a network blocks Google Fonts, the pages use the system font (on a network that silently drops the connection, the first paint can wait until the browser gives up). Four small contrast fixes on top of the teacher's file: unread badge #0070c0, Part A/B chip text #005a9c, amber part-marks border, sender names on coloured bubbles at full white. The front-page game numbers keep their orange circles (as in the mockup).
 - `config.js`: `SCOREBOARD_URL`, `BOARD_REFRESH_SECONDS`, `TIME_FACTOR` (1.5 = 50% more time).
 
 ## Tests
@@ -82,6 +83,7 @@ python3 tests/touch.py          # emulated iPhone 13 and iPad: tapping through L
 node tests/check-agent-data.js  # agent: files = game texts, recording quotes, sales totals recomputed, every stage/arena key over 120 seeds
 python3 tests/agent-play.py     # agent: all lessons, stages and the Agent Arena by clicking, 3-phone rule, downloads, at 390 and 1100 px
 python3 tests/teacher.py        # live progress: a student plays all of Be the Agent + the Agent Arena; after every lesson/item the board shows the right position and points; the teacher view (4 boards, auto-refresh, fits 1280x720)
+python3 tests/check-contrast.py  # theme: 22 text/background pairs >= WCAG AA 4.5:1, colours read from the CSS
 python3 tests/agent-devices.py  # agent by TAPPING on iPhone SE, iPhone 13, Galaxy S9+ (320 px), iPad portrait + landscape: 44 px targets, text >= 12 px, timer in view, new moves scrolled into view
 ```
 
