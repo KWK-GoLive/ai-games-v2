@@ -28,7 +28,9 @@
     sent.appendChild(h("span", { class: "kh-gap", text: "?" }));
     return h("div", { class: "stack" },
       h("div", { class: "small muted", text: backoff
-        ? "The model can see up to the last 3 words (highlighted). If they never appear together in the text, it backs off to 2, then 1."
+        ? (k === 3 ? "The model can see up to the last 3 words (highlighted). If they never appear together in the text, it backs off to 2, then 1."
+          : k === 2 ? "The model can see up to the last 2 words (highlighted). If they never appear together in the text, it backs off to the last word."
+          : "The model sees only the last word (highlighted).")
         : "The model only sees the last " + k + " word" + (k === 1 ? "" : "s") + " (highlighted):" }), sent);
   }
 

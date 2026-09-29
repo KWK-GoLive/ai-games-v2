@@ -315,6 +315,76 @@
     });
   }
 
+  /* ===== Final only (29 Sep 2026): keyhole questions with the full model =====
+   * One rule for the whole final: the model sees the keyhole stated on the question and always backs off inside it,
+   * so it always writes something ("No data" stays as an option but is never right). Each question comes from a
+   * sentence start where the keyhole size still changes the answer. Stage 4 keeps its strict keyhole ("No data"). */
+  function spliceCands(world, m) {
+    var sents = world.text.map(M.tokenize), seen = {}, list = [];
+    sents.forEach(function (A) { sents.forEach(function (B) {
+      for (var a = 1; a < A.length; a++) for (var b = 1; b < B.length; b++) for (var j = 0; b + j <= B.length; j++) {
+        if (A[a - 1] !== B[b - 1]) continue;
+        var p = A.slice(0, a).concat(B.slice(b, b + j));
+        if (p.length < 3 || p.length > 5) continue;
+        var key = p.join(" ");
+        if (seen[key]) continue;
+        seen[key] = 1;
+        var bo = [1, 2, 3].map(function (k) { return m.nextBackoff(p, k); });
+        if (!bo[0].dist.length) continue;
+        list.push({ p: p, bo: bo, ans: bo.map(function (r) { return r.dist[0].word; }) });
+      }
+    }); });
+    return list;
+  }
+  function keyholeItem(world, c, k, rng) {
+    var r = c.bo[k - 1], key = c.ans[k - 1], seen = c.p.slice(-r.used);
+    var vocab = vocabOf(world).concat([END]);
+    var others = uniq(c.ans.concat(r.dist.slice(1).map(function (d) { return d.word; }), shuffle(vocab, rng))).filter(function (x) { return x !== key; });
+    var opts = shuffle([key].concat(others.slice(0, 3)), rng);
+    var options = opts.map(function (w) { return { value: w, label: dw(w) }; }).concat([{ value: "none", label: "No data: it has never seen this" }]);
+    return { kind: "mcq", world: world, prefix: c.p, k: k, backoff: true, limit: 40, key: key, ans: c.ans, used: r.used,
+      title: k === 1 ? "With a 1-word keyhole, what does the model write next?" : "Up to a " + k + "-word keyhole (backing off if needed): what does the model write next?",
+      hint: k === 1 ? "Look up only the last word. Which word follows it most often in the text?"
+        : "Look for the last " + k + " words together in the text. Not there? Use fewer words, until you find them.",
+      options: options,
+      grade: function (a) {
+        var steps = [];
+        for (var j = k; j > r.used; j--) steps.push(qs(c.p.slice(-j)) + " never appears in the text, so it backs off to " + (j - 1) + " word" + (j - 1 === 1 ? "" : "s") + ".");
+        steps.push("After " + qs(seen) + " the text has: " + countsText(r.dist) + " \u2192 " + q(key) + tieNote(r.dist, seen) + ".");
+        var sizes = [1, 2, 3].filter(function (x) { return x !== k; });
+        var same = sizes.every(function (x) { return c.ans[x - 1] === key; });
+        var cmp = sizes.map(function (x) { return x + "-word keyhole: " + q(c.ans[x - 1]); }).join("; ");
+        var out = ["The model sees " + (k === 1 ? "the last word" : "up to the last " + k + " words") + ". " + steps.join(" "),
+          "Same sentence, other keyholes \u2192 " + cmp + "." + (same ? "" : " The keyhole changes the answer.")];
+        if (a === "none" || r.used < k) out.push("\u201cNo data\u201d is never the answer here: a model always writes something. When it can't find the words, it backs off to fewer words.");
+        return { frac: a === key ? 1 : 0, explain: out };
+      },
+      sample: function (rr) { return pick(options, rr).value; } };
+  }
+  function finalKeyhole(D, rng) {
+    // Question A: a 3-word keyhole whose words are NOT in the text, so the model must back off ("No data" is the trap).
+    // Question B: a 1- or 2-word keyhole on a sentence where the keyhole size changes the answer.
+    var worlds = shuffle(D.worlds, rng).map(function (w) { return { world: w, list: spliceCands(w, modelFor(w)) }; });
+    // prefer sentence starts that read naturally: no word repeated (except "the"/"a") and no dangling last word
+    var DANGLE = ["the", "a", "is", "at", "every", "in", "on", "all", "was", "our", "their"];
+    worlds.forEach(function (W) { W.list = W.list.filter(function (c) {
+      var content = c.p.filter(function (w) { return w !== "the" && w !== "a"; });
+      return DANGLE.indexOf(c.p[c.p.length - 1]) < 0 && uniq(content).length === content.length;
+    }); });
+    var usedP = {};
+    var needsBackoff = function (c, k) { return c.bo[k - 1].used < k; };
+    var sizeMatters = function (c, k) { return c.ans.some(function (x, i) { return i !== k - 1 && x !== c.ans[k - 1]; }); };
+    function take(k, want) {   // first world (random order) with an unused sentence that fits; relax the wish if none does
+      var tests = [want, function () { return true; }];
+      for (var t = 0; t < tests.length; t++) for (var i = 0; i < worlds.length; i++) {
+        var pool = worlds[i].list.filter(function (c) { return !usedP[c.p.join(" ")] && tests[t](c, k); });
+        if (pool.length) { var c = pick(pool, rng); usedP[c.p.join(" ")] = 1; return keyholeItem(worlds[i].world, c, k, rng); }
+      }
+      return null;
+    }
+    var kB = rng() < 0.5 ? 1 : 2;
+    return [take(3, needsBackoff), take(kB, sizeMatters)].filter(Boolean);
+  }
   /* ================= Chat brain (stage 7 since 29 Sep 2026; generator stage5) ================= */
   var QSTOP = ["when", "does", "do", "is", "are", "the", "a", "where", "who", "what", "at", "on"];
   function topicWords(words) { return words.filter(function (w) { return QSTOP.indexOf(w) < 0; }).sort().join(" "); }
@@ -418,10 +488,13 @@
     var s1 = stage1(D, rng);
     var top = s1.filter(function (x) { return /Which word/.test(x.title); })[0], pctIt = s1.filter(function (x) { return /what %/.test(x.title); })[0];
     var s3 = stage3(D, rng);
+    // the final states the keyhole on every question (29 Sep 2026)
+    top.title = "1-word keyhole, temperature 0: which word does the model pick after " + q(top.ctx) + "?";
+    pctIt.title = "1-word keyhole: after " + q(pctIt.ctx) + ", what % of the time does " + q(pctIt.target) + " come next?";
     var items = [top, pctIt]
       .concat(take(stage2, 1))
       .concat([s3.filter(function (x) { return x.kind !== "spin"; })[0], s3.filter(function (x) { return x.kind === "spin"; })[0]])
-      .concat(take(stage4, 2))
+      .concat(finalKeyhole(D, rng))
       .concat(take(stage6, 1))
       .concat(take(stage7, 2))
       .concat(take(stage5, 2));
@@ -436,7 +509,7 @@
     { id: "count", make: stage1 }, { id: "greedy", make: stage2 }, { id: "temp", make: stage3 },
     { id: "keyhole", make: stage4 }, { id: "boss2", make: stage6 }, { id: "boss3", make: stage7 }, { id: "chat", make: stage5 }
   ];
-  var api = { STAGES: STAGES, FINAL: finalStage, modelFor: modelFor, vocabOf: vocabOf, chatAnswer: chatAnswer, sameQuestion: sameQuestion,
+  var api = { STAGES: STAGES, FINAL: finalStage, finalKeyhole: finalKeyhole, spliceCands: spliceCands, modelFor: modelFor, vocabOf: vocabOf, chatAnswer: chatAnswer, sameQuestion: sameQuestion,
     sharesAt: sharesAt, boss3Case: boss3Case, boss3Pools: boss3Pools, MAX_NEW: MAX_NEW, M: M };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   root.LLMA = api;
