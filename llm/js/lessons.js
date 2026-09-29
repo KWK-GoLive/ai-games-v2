@@ -36,6 +36,8 @@
   };
   // Real context windows, for the end of lesson 4. Checked against the sources on 28 Sep 2026.
   var REAL = {
+    gpt3short: "2,048 tokens at once.",
+    claudeshort: "Claude Sonnet 5: up to 1,000,000 tokens at once. (Sources are in the teaching guide.)",
     gpt3: "GPT-3 (2020) could see 2,048 tokens at once (Brown et al., 2020, \u201cLanguage Models are Few-Shot Learners\u201d, NeurIPS; section 2.1).",
     claude: "Claude Sonnet 5 can see up to 1,000,000 tokens at once (Anthropic's documentation, \u201cContext windows\u201d, checked 28 Sep 2026)."
   };
@@ -183,7 +185,7 @@
       stepBox.appendChild(h("p", {}, note, "The model looks at ", h("b", { text: qs(seen) }), ". In the text, right after it:"));
       stepBox.appendChild(ctable(r.dist, { top: false }));
       stepBox.appendChild(practice({
-        q: "Temperature 0: which piece does it write next?",
+        q: "Temperature 0: which word does it write next?",
         options: opts(pad(choices)),
         key: key,
         right: key === END ? "[end]: the model stops. The sentence is finished." : q(key) + " has the biggest count" + (r.dist.length > 1 && r.dist[0].count === r.dist[1].count ? " (a tie: it came first right after " + qs(seen) + ", reading from the top)" : "") + ".",
@@ -287,7 +289,7 @@
           wrong: "Look at the green box after each \u201cnight\u201d." }], unlock);
       } },
       { title: "Temperature 0: always the top word", locked: true, render: function (el, unlock) {
-        el.appendChild(h("p", { text: "When the model writes, the simplest rule is: take the word with the biggest count. We call this temperature 0 (lesson 3 shows other temperatures). The arena stages use temperature 0." }));
+        el.appendChild(h("p", { text: "When the model writes, the simplest rule is: take the word with the biggest count. We call this temperature 0: no randomness, always the top word (lesson 3 shows other temperatures). The arena stages use temperature 0." }));
         el.appendChild(ctable(dDrink, { top: true, title: "After \u201cdrink\u201d:" }));
         chain(el, [{ q: "Temperature 0: which word does the model write after \u201cdrink\u201d?", key: dDrink[0].word, options: opts(["coffee", "water", dDrink[0].word, "night"]),
           right: q(dDrink[0].word) + " has the biggest count (" + dDrink[0].count + "), so it wins every time.",
@@ -296,7 +298,7 @@
       { title: "A tie? The first one wins", locked: true, render: function (el, unlock) {
         el.appendChild(ltext(TEXTS.L1, [C.tie]));
         el.appendChild(ctable(dTie, { title: "After \u201ctea\u201d:" }));
-        el.appendChild(h("p", {}, "Both have 1: a tie. Our model's rule: pick the one it saw ", h("b", { text: "first" }), " right after \u201ctea\u201d, reading the text from the top."));
+        el.appendChild(h("p", {}, "Both have 1: a tie. Our model's rule: reading from line 1 down, pick the one you meet ", h("b", { text: "first" }), " right after \u201ctea\u201d."));
         chain(el, [{ q: "At temperature 0 the model writes " + q(dTie[0].word) + " after \u201ctea\u201d. Why?", key: "first", oneCol: true,
           options: [{ value: "count", label: "It has a bigger count" }, { value: "first", label: "Reading from the top, it comes right after \u201ctea\u201d first (sentence 1)" }, { value: "short", label: "It's a shorter word" }, { value: "random", label: "The model picks at random" }],
           right: "Sentence 1 says \u201ctea in\u201d; \u201ctea at\u201d only comes in sentence 3. Same count, so the first one wins.",
@@ -306,9 +308,9 @@
         recap(el, [
           { icon: "\ud83d\udd22", title: "Training = counting", text: "The model counts which word comes right after each word. That table is all it knows." },
           { icon: "%", title: "Count \u00f7 total", text: "gives the chance (%) of each next word." },
-          { icon: "\ud83c\udfc1", title: "[end] counts too", text: "The end of a sentence is a piece the model can pick: it means stop." },
-          { icon: "\ud83e\udd47", title: "Temperature 0 + ties", text: "Take the biggest count. On a tie, the one seen first right after that word." }]);
-        el.appendChild(h("p", { class: "small muted", text: "Stage 1 uses a NEW, longer training text, so count carefully. The timer starts when you press Start." }));
+          { icon: "\ud83c\udfc1", title: "[end] counts too", text: "The end of a sentence counts like a word: [end]. Picking it means stop." },
+          { icon: "\ud83e\udd47", title: "Temperature 0 + ties", text: "Take the biggest count. Tie? The one you meet first right after that word, reading from line 1 down." }]);
+        el.appendChild(h("p", { class: "small muted", text: "Stage 1 uses a NEW, longer training text, so count carefully." }));
       } }
     ], done, ctx);
   }
@@ -321,14 +323,14 @@
     stepper(box, [
       { title: "Writing = guess, add, repeat", render: function (el) {
         el.appendChild(V.flow([{ icon: "\ud83d\udd11", label: "Look at the LAST word" }, { icon: "\ud83d\udd22", label: "Take its top next word" }, { icon: "\u2795", label: "Add it" }], { loop: "Repeat until it picks [end]" }));
-        el.appendChild(h("p", { text: "The model sees only the last word: a 1-word window (lesson 4 calls this the keyhole). It doesn't remember the start of the sentence." }));
+        el.appendChild(h("p", { text: "The model sees only the last word: a 1-word keyhole (lesson 4 explains keyholes). It doesn't remember the start of the sentence." }));
         el.appendChild(ltext(TEXTS.L2));
       } },
       { title: "[end] is how the model stops", render: function (el) {
         el.appendChild(ltext(TEXTS.L2, ["day"]));
         el.appendChild(V.cards([
           { icon: "\ud83c\udfc1", title: "Every sentence ends with [end]", text: "So after \u201cday\u201d the model has counted [end] 2 times." },
-          { icon: "\u270b", title: "Picking [end] = stop", text: "When [end] is the top next piece, the sentence is finished. Without [end], the model would only stop when it hits a length limit." }], { cols: 2 }));
+          { icon: "\u270b", title: "Picking [end] = stop", text: "When [end] is the top next word, the sentence is finished. Without [end], the model would only stop when it hits a length limit." }], { cols: 2 }));
       } },
       { title: "Write with the model, one word at a time", locked: true, render: function (el, unlock) {
         el.appendChild(ltext(TEXTS.L2));
@@ -336,7 +338,7 @@
       } },
       { title: "Your turn: the whole sentence", locked: true, render: function (el, unlock) {
         el.appendChild(ltext(TEXTS.L2));
-        el.appendChild(h("p", {}, "Start from ", h("b", { text: qs(C.practice) }), ". Temperature 0, 1-word window. Tap the pieces in order and finish with [end]."));
+        el.appendChild(h("p", {}, "Start from ", h("b", { text: qs(C.practice) }), ". Temperature 0, 1-word keyhole. Tap the words in order and finish with [end]."));
         var fb = h("div", { class: "stack", "aria-live": "polite" });
         var tiles = [];
         TEXTS.L2.forEach(function (s) { tok(s).forEach(function (w) { if (tiles.indexOf(w) < 0) tiles.push(w); }); });
@@ -346,11 +348,11 @@
           var n = 0; while (n < ws.length && n < key.length && ws[n] === key[n]) n++;
           if (n === key.length && ws.length === key.length) {
             fb.appendChild(h("p", { class: "feedback good", text: "\u2713 Exactly what the model writes: " + qs(C.practice.concat(key.slice(0, -1))) + " [end]" }));
-            practiceTrail.trail.forEach(function (t) { fb.appendChild(h("p", { class: "small", text: "After " + q(t.seen[0]) + ": " + t.raw.map(function (d) { return dw(d.word) + " " + d.count; }).join(", ") + " \u2192 " + q(t.word) + (t.raw.length > 1 && t.raw[0].count === t.raw[1].count ? " (tie: it comes first)" : "") })); });
+            practiceTrail.trail.forEach(function (t) { fb.appendChild(h("p", { class: "small", text: "After " + q(t.seen[0]) + ": " + t.raw.map(function (d) { return dw(d.word) + " " + d.count; }).join(", ") + " \u2192 " + q(t.word) + (t.raw.length > 1 && t.raw[0].count === t.raw[1].count ? " (a tie: reading from line 1 down, it is the first one right after " + q(t.seen[0]) + ")" : "") })); });
             unlock();
           } else {
             var t = practiceTrail.trail[Math.min(n, practiceTrail.trail.length - 1)];
-            fb.appendChild(h("p", { class: "feedback bad", text: "\u2717 The first " + n + " piece" + (n === 1 ? " is" : "s are") + " right. Check the next one: after " + q(t.seen[0]) + " the text has " + t.raw.map(function (d) { return dw(d.word) + " " + d.count; }).join(", ") + ". Fix it and press Submit again." }));
+            fb.appendChild(h("p", { class: "feedback bad", text: "\u2717 The first " + n + " word" + (n === 1 ? " is" : "s are") + " right. Check the next one: after " + q(t.seen[0]) + " the text has " + t.raw.map(function (d) { return dw(d.word) + " " + d.count; }).join(", ") + ". Fix it and press Submit again." }));
           }
         } });
         el.appendChild(b.el); el.appendChild(fb);
@@ -359,9 +361,9 @@
         el.appendChild(ltext(TEXTS.L2, ["all"]));
         el.appendChild(h("p", { text: "\u201call night\u201d is in the text, but after \u201call\u201d the counts are day 2, night 1. At temperature 0 the model writes \u201cday\u201d every single time. Lesson 3 shows how a real chatbot can still sometimes write \u201cnight\u201d." }));
         recap(el, [
-          { icon: "\ud83d\udd11", title: "1-word window", text: "Look only at the last word, take its top next word, add it, repeat." },
-          { icon: "\ud83c\udfc1", title: "[end] stops it", text: "The sentence is finished when the top next piece is [end]." },
-          { icon: "\ud83d\udd01", title: "It can loop", text: "With such a tiny window it may go round in circles. The stage stops it after 8 pieces." }]);
+          { icon: "\ud83d\udd11", title: "1-word keyhole", text: "Look only at the last word, take its top next word, add it, repeat." },
+          { icon: "\ud83c\udfc1", title: "[end] stops it", text: "The sentence is finished when the top next word is [end]." },
+          { icon: "\ud83d\udd01", title: "It can loop", text: "With such a tiny keyhole it may go round in circles. The stage stops it after 8 words." }]);
       } }
     ], done, ctx);
   }
@@ -438,7 +440,7 @@
     var choices = opts(["tea", "apples", "green", "like"]);
     stepper(box, [
       { title: "The model sees only the last few words", render: function (el) {
-        el.appendChild(h("p", { text: "How many of the last words the model can see is called its context window. We'll call it the keyhole. Words outside the keyhole don't exist for the model." }));
+        el.appendChild(h("p", { text: "How many of the last words the model can see is called its context window. In this game we call it the keyhole. Words outside the keyhole don't exist for the model." }));
         el.appendChild(keyholeView(p, 1)); el.appendChild(h("p", { class: "small muted", text: "1-word keyhole: it sees only \u201cgreen\u201d." }));
         el.appendChild(keyholeView(p, 2)); el.appendChild(h("p", { class: "small muted", text: "2-word keyhole: it sees \u201clike green\u201d." }));
         el.appendChild(keyholeView(p, 3)); el.appendChild(h("p", { class: "small muted", text: "3-word keyhole: it sees \u201cwe like green\u201d." }));
@@ -469,11 +471,11 @@
           right: qs(nd) + " never appears in the text, so this tiny model has nothing to count. (Lesson 5 shows the fix: back off to fewer words.)",
           wrong: "Search the text for exactly \u201cthey like green\u201d, all three in that order." }], unlock);
       } },
-      { title: "Real models: a much bigger window", render: function (el) {
+      { title: "Real models: a much bigger keyhole", render: function (el) {
         el.appendChild(V.cards([
-          { icon: "\ud83e\udde9", title: "Tokens, not words", text: "Real models count their window in tokens: a word or a piece of a word. Other languages, including Thai, often need more tokens than English for the same meaning." },
-          { icon: "\ud83d\udcdc", title: "GPT-3 (2020)", text: REAL.gpt3 },
-          { icon: "\ud83d\udcda", title: "Today", text: REAL.claude },
+          { icon: "\ud83e\udde9", title: "Tokens, not words", text: "Real models count their keyhole in tokens: a word or a piece of a word. Other languages, including Thai, often need more tokens than English for the same meaning." },
+          { icon: "\ud83d\udcdc", title: "GPT-3 (2020)", text: REAL.gpt3short },
+          { icon: "\ud83d\udcda", title: "Today", text: REAL.claudeshort },
           { icon: "\ud83e\udde0", title: "No exact matching", text: "A real model doesn't search its training text for these exact words. It learned patterns, so it can still guess well when the wording is new." }], { cols: 2 }));
         el.appendChild(h("p", { class: "small muted", text: "Stage 4 asks for 1-, 2- and 3-word keyholes on a new text." }));
       } }
@@ -486,7 +488,7 @@
     var d1 = m.next(pc, 1), d2 = m.next(pc, 2), b = m.nextBackoff(pb, 2);
     stepper(box, [
       { title: "Look at the last TWO words together", render: function (el) {
-        el.appendChild(h("div", {}, h("span", { class: "win-badge" }, "\ud83d\udd11 2-WORD WINDOW")));
+        el.appendChild(h("div", {}, h("span", { class: "win-badge" }, "\ud83d\udd11 2-WORD KEYHOLE")));
         el.appendChild(h("p", { text: "Now the model looks up its last two words as one pair, and counts what came right after that pair in the text. More context, better guesses." }));
         el.appendChild(ltext(TEXTS.L5));
       } },
@@ -496,7 +498,7 @@
         el.appendChild(keyholeView(pc, 2));
         el.appendChild(ltext(TEXTS.L5, pc));
         el.appendChild(ctable(d2, { title: "2-word keyhole, after " + qs(pc) + ":" }));
-        chain(el, [{ q: "With the 2-word window, what does the model write after " + qs(pc) + "?", key: d2[0].word, options: opts([d1[0].word, d2[0].word, "the", END]),
+        chain(el, [{ q: "With the 2-word keyhole, what does the model write after " + qs(pc) + "?", key: d2[0].word, options: opts([d1[0].word, d2[0].word, "the", END]),
           right: "The pair " + qs(pc) + " is followed by " + q(d2[0].word) + ". With only \u201cdog\u201d it would say " + q(d1[0].word) + " (" + d1.map(function (x) { return dw(x.word) + " " + x.count; }).join(", ") + ").",
           wrong: "Only count what comes right after the whole pair " + qs(pc) + " (yellow)." }], unlock);
       } },
@@ -505,26 +507,26 @@
         el.appendChild(ltext(TEXTS.L5, pb.slice(-1)));
         el.appendChild(h("p", {}, qs(pb), " never appears in the text. So the model ", h("b", { text: "backs off" }), ": it uses only the last word, ", q(pb[pb.length - 1]), "."));
         el.appendChild(ctable(b.dist, { title: "After " + q(pb[pb.length - 1]) + ":" }));
-        chain(el, [{ q: "2-word window with back-off: what does the model write after " + qs(pb) + "?", key: b.dist[0].word, oneCol: true,
+        chain(el, [{ q: "2-word keyhole with back-off: what does the model write after " + qs(pb) + "?", key: b.dist[0].word, oneCol: true,
           options: [{ value: b.dist[0].word, label: dw(b.dist[0].word) }, { value: "none", label: "Nothing: it has no data" }, { value: "ran", label: "ran" }],
           right: "It backs off to " + q(pb[pb.length - 1]) + " and writes " + q(b.dist[0].word) + ". Back-off means this model never gets stuck.",
           wrong: "The pair is missing, so use only the last word." }], unlock);
       } },
       { title: "Write a whole sentence with 2 words", locked: true, render: function (el, unlock) {
-        el.appendChild(h("div", {}, h("span", { class: "win-badge" }, "\ud83d\udd11 2-WORD WINDOW")));
+        el.appendChild(h("div", {}, h("span", { class: "win-badge" }, "\ud83d\udd11 2-WORD KEYHOLE")));
         el.appendChild(ltext(TEXTS.L5));
         el.appendChild(guidedWrite(m, C.whole, 2, unlock));
       } },
       { title: "What you learned", render: function (el) {
         recap(el, [
-          { icon: "\ud83d\udd11", title: "2-word window", text: "Look up the last two words together. What came right after that pair?" },
+          { icon: "\ud83d\udd11", title: "2-word keyhole", text: "Look up the last two words together. What came right after that pair?" },
           { icon: "\u21a9\ufe0f", title: "Back-off", text: "If the pair never appears, use only the last word." },
           { icon: "\ud83d\udc51", title: "Next: the 2-word boss", text: "Stage 5 asks you to write whole sentences this way, against the clock." }]);
       } }
     ], done, ctx);
   }
 
-  /* ======================= Lesson 6: Answering questions ======================= */
+  /* ======================= Lesson 7 (since 29 Sep 2026): Answering questions ======================= */
   function lesson6(box, done, ctx) {
     var L6 = TEXTS.L6, C = CASES.L6, LL = root.LLMA;
     var ex = LL.chatAnswer(L6, C.exact), pa = LL.chatAnswer(L6, C.partial), oa = LL.chatAnswer(L6, C.onlyA);
@@ -546,7 +548,7 @@
       { title: "A chatbot continues after \u201cA:\u201d", render: function (el) {
         el.appendChild(h("p", { text: "Chatbots are also trained on example chats: a question (Q:), then an answer (A:). So the model learns: after \u201cA:\u201d come answer words. When you ask something, it writes \u201cQ: your question A:\u201d and simply continues the text." }));
         el.appendChild(chatText(L6));
-        el.appendChild(h("p", { class: "small muted", text: "In this lesson and in stage 6 the model's keyhole is up to 8 words (so a whole short question fits), with the same back-off rule as lesson 5." }));
+        el.appendChild(h("p", { class: "small muted", text: "Same idea as lessons 5 and 6, with a longer keyhole: up to 8 words, so a whole short question fits. Too long to find? Back off to a shorter ending." }));
       } },
       { title: "A question it has seen", locked: true, render: function (el, unlock) {
         el.appendChild(chatText(L6));
@@ -583,12 +585,12 @@
           { icon: "\ud83e\uddf8", title: "Our toy model", text: "Looks for the exact words in its training text, and backs off (shorter keyhole) when it can't find them." },
           { icon: "\ud83e\udd16", title: "A real LLM", text: "Doesn't search its training text and doesn't back off. It learned patterns from a huge amount of text, so it can answer new questions well." },
           { icon: "\u26a0\ufe0f", title: "Same weakness", text: "When a real LLM doesn't know, it still writes something that looks like an answer, and sounds just as sure. Always check important facts." },
-          { icon: "\ud83d\udcac", title: "Stage 6", text: "Predict the answer, then judge: supported by the chats, or made up?" }], { cols: 2 }));
+          { icon: "\ud83d\udcac", title: "Stage 7", text: "Predict the answer, then judge: supported by the chats, or made up?" }], { cols: 2 }));
       } }
     ], done, ctx);
   }
 
-  /* ======================= Lesson 7: Three-word window ======================= */
+  /* ======================= Lesson 6 (since 29 Sep 2026): Three-word keyhole ======================= */
   function lesson7(box, done, ctx) {
     var m = model("L7"), C = CASES.L7;
     function info(text) { var p = tok(text), r = m.nextBackoff(p, 3); return { p: p, used: r.used, dist: r.dist, key: r.dist[0].word }; }
@@ -604,9 +606,9 @@
     }
     stepper(box, [
       { title: "Up to 3 words: the longest that has data", render: function (el) {
-        el.appendChild(h("div", {}, h("span", { class: "win-badge" }, "\ud83d\udd11 UP TO 3-WORD WINDOW")));
+        el.appendChild(h("div", {}, h("span", { class: "win-badge" }, "\ud83d\udd11 UP TO 3-WORD KEYHOLE")));
         el.appendChild(V.flow([{ label: "Try the last 3 words" }, { label: "Not found? Try 2" }, { label: "Still not? Use 1" }]));
-        el.appendChild(h("p", { text: "The model always uses as many words as it can: the longest keyhole that appears in the text. A real LLM also uses everything in its window every time (and needs no back-off)." }));
+        el.appendChild(h("p", { text: "The model always uses as many words as it can: the longest keyhole that appears in the text." }));
         el.appendChild(ltext(TEXTS.L7));
       } },
       { title: "3 words found", locked: true, render: function (el, unlock) {
@@ -630,16 +632,11 @@
         chain(el, [{ q: "What does the model write after " + qs(i1.p) + "?", key: i1.key, options: choices,
           right: "Only " + qs(i1.p.slice(-1)) + " has data: " + i1.dist.map(function (d) { return dw(d.word) + " " + d.count; }).join(", ") + " \u2192 " + q(i1.key) + ".", wrong: "Neither 3 nor 2 words appear. Use the last word only." }], unlock);
       } },
-      { title: "Bonus: add temperature (not scored)", render: function (el) {
-        var d = m.next(i1.p, 1);
-        el.appendChild(h("p", { text: "The boss uses temperature 0. But a real chatbot would spin here. Try it: these are the counts after \u201cred\u201d." }));
-        el.appendChild(TV.calculator({ ctx: "red", dist: d.map(function (x) { return { word: x.word, count: x.count }; }), T: 0, spin: true, temps: [0, 0.5, 1, 2, 5] }).el);
-      } },
       { title: "What you learned", render: function (el) {
         recap(el, [
           { icon: "\ud83d\udd11", title: "Longest keyhole with data", text: "Try 3 words, then 2, then 1. The first one found decides." },
-          { icon: "\ud83d\udd00", title: "Different windows, different words", text: "The same sentence can end in 3 different ways with 1, 2 or 3 words." },
-          { icon: "\ud83d\udc51", title: "The final boss", text: "Stage 7: single \u201cwhat comes next?\u201d questions with up to 3 words, temperature 0." }]);
+          { icon: "\ud83d\udd00", title: "Different keyholes, different words", text: "The same sentence can end in 3 different ways with 1, 2 or 3 words." },
+          { icon: "\ud83c\udfc6", title: "Next: the three-word boss", text: "Stage 6: single \u201cwhat comes next?\u201d questions with up to 3 words, temperature 0." }]);
       } }
     ], done, ctx);
   }

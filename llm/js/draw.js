@@ -82,8 +82,8 @@
   function drawTiles(it, box, api) {
     box.appendChild(worldText(it.world));
     box.appendChild(h("p", { class: "small muted", text: it.k === 1
-      ? "Temperature 0, 1-word window: after each word, write the word that most often follows it."
-      : "Temperature 0, 2-word window: look up the last two words together; if that pair never appears, use only the last word." }));
+      ? "Temperature 0, 1-word keyhole: after each word, write the word that most often follows it."
+      : "Temperature 0, 2-word keyhole: look up the last two words together; if that pair never appears, use only the last word." }));
     var b = W().tileBuilder({ seed: it.seed.map(M.displayWord), tiles: it.tiles, max: it.max, onSubmit: function (words) { api.submit(words); } });
     box.appendChild(b.el);
     return { collect: b.collect, reveal: function () { b.reveal(it.key); } };
@@ -136,7 +136,7 @@
     return function (rng) { return fn(D, rng).map(function (it) { it.render = drawer(it); return it; }); };
   }
   function windowBadge(n, extra) {
-    return function (h) { return h("div", {}, h("span", { class: "win-badge" }, "🔑 " + (typeof n === "number" ? n + "-WORD WINDOW" : n), extra ? h("small", { text: extra }) : null)); };
+    return function (h) { return h("div", {}, h("span", { class: "win-badge" }, "🔑 " + (typeof n === "number" ? n + "-WORD KEYHOLE" : n), extra ? h("small", { text: extra }) : null)); };
   }
 
   window.LLMA_DRAW = { wrap: wrap, drawer: drawer, worldText: worldText, keyhole: keyhole, windowBadge: windowBadge };

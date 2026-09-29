@@ -49,7 +49,7 @@
       if (!pool.length) pool = shuffle(ctxs.filter(filter), rng);
       var c = pool[0]; used[c.w] = 1; return c;
     }
-    function hintFor(c) { return "Find every " + q(c.w) + " in the text and look at the word right after it. At the end of a line, the next piece is [end]."; }
+    function hintFor(c) { return "Find every " + q(c.w) + " in the text and look at the word right after it. At the end of a line, the next word is [end]."; }
     // two "top word" items (no tie at the top, so there is one clear answer)
     for (var i = 0; i < 2; i++) (function () {
       var clear = ctxs.filter(function (c) { return !used[c.w] && c.dist[0].count > c.dist[1].count; }).length;
@@ -113,15 +113,15 @@
     return {
       kind: "tiles", world: world, seed: seed, k: k, limit: limit, key: key, tiles: tiles, max: MAX_NEW,
       title: "Continue " + qs(seed) + " exactly as the model would.",
-      hint: k === 1 ? "Look up the word you just wrote: which word follows it most often in the text? Ties: the one that comes right after it first, reading from the top."
+      hint: k === 1 ? "Look up the word you just wrote: which word follows it most often in the text?"
         : "Look up the last TWO words together. If that pair never appears in the text, look up only the last word.",
       grade: function (a) {
         a = a || [];
         var n = 0; while (n < a.length && n < key.length && a[n] === key[n]) n++;
         var frac = Math.round(100 * n / Math.max(key.length, a.length)) / 100;
         var loop = key.length === MAX_NEW && key[key.length - 1] !== END;
-        return { frac: frac, explain: ["The model writes: " + qs(seed.concat(key)) + (loop ? " \u2026 and it would go round in this loop forever, so it stops at " + MAX_NEW + " pieces." : ".") +
-          " You matched the first " + n + " of " + key.length + " pieces."].concat(trailExplain(r.trail, k)) };
+        return { frac: frac, explain: ["The model writes: " + qs(seed.concat(key)) + (loop ? " \u2026 and it would go round in this loop forever, so it stops at " + MAX_NEW + " words." : ".") +
+          " You matched the first " + n + " of " + key.length + " words."].concat(trailExplain(r.trail, k)) };
       },
       sample: function (rr) { var out = []; var n = 1 + Math.floor(rr() * 6); for (var i = 0; i < n; i++) out.push(pick(tiles, rr).value); return out; }
     };
@@ -309,13 +309,13 @@
           var what = key === "none" ? qs(seen) + " never appears in the text, so a " + k + "-word model has no data (a real model would still guess something)."
             : "After " + qs(seen) + " the text has: " + countsText(dist) + " \u2192 " + q(key) + tieNote(dist, seen) + ".";
           var cmp = [1, 2, 3].filter(function (x) { return x !== k; }).map(function (x) { return x + "-word keyhole: " + (c.ans[x - 1] === "none" ? "no data" : q(c.ans[x - 1])); }).join("; ");
-          return { frac: a === key ? 1 : 0, explain: ["The model sees only " + qs(seen) + ". " + what, "Same sentence, other keyholes \u2192 " + cmp + ". The window changes the answer."] };
+          return { frac: a === key ? 1 : 0, explain: ["The model sees only " + qs(seen) + ". " + what, "Same sentence, other keyholes \u2192 " + cmp + ". The keyhole changes the answer."] };
         },
         sample: function (r) { return pick(options, r).value; } };
     });
   }
 
-  /* ================= Stage 5: Chat brain ================= */
+  /* ================= Chat brain (stage 7 since 29 Sep 2026; generator stage5) ================= */
   var QSTOP = ["when", "does", "do", "is", "are", "the", "a", "where", "who", "what", "at", "on"];
   function topicWords(words) { return words.filter(function (w) { return QSTOP.indexOf(w) < 0; }).sort().join(" "); }
   function sameQuestion(a, b) { return a[0] === b[0] && topicWords(a) === topicWords(b); }
@@ -348,7 +348,7 @@
       var first = x.r.trail[0];
       return { kind: "chat", chat: chat, question: x.q, limit: 60, key: key,
         title: "Someone asks: \u201c" + ds(x.q).charAt(0).toUpperCase() + ds(x.q).slice(1) + "?\u201d",
-        hint: "Find the longest ending of \u201cQ: " + ds(x.q) + " A:\u201d that appears in the example chats, then copy what came after it. If two answers came after it, the one higher up in the list wins.",
+        hint: "Find the longest ending of \u201cQ: " + ds(x.q) + " A:\u201d that appears in the example chats, then continue from there, word by word.",
         options: opts.map(function (a) { return { value: a, label: a === "I don't know" ? a : ds(a) }; }),
         grade: function (a) {
           a = a || {};
@@ -368,7 +368,7 @@
     });
   }
 
-  /* ================= Stage 7: three-word boss =================
+  /* ================= Three-word boss (stage 6 since 29 Sep 2026; generator stage7) =================
    * Single "what comes next?" questions at temperature 0 with a keyhole of up to 3 words:
    * use the last 3 words if they appear together in the text; if not, back off to 2, then to 1. */
   function boss3Case(world, text) {
@@ -423,18 +423,18 @@
       .concat([s3.filter(function (x) { return x.kind !== "spin"; })[0], s3.filter(function (x) { return x.kind === "spin"; })[0]])
       .concat(take(stage4, 2))
       .concat(take(stage6, 1))
-      .concat(take(stage5, 2))
-      .concat(take(stage7, 2));
+      .concat(take(stage7, 2))
+      .concat(take(stage5, 2));
     items.forEach(function (it, i) { it.skill = FINAL_SKILLS[i]; });
     return items;
   }
   var FINAL_SKILLS = ["Count it", "Count it", "Greedy writer", "Temperature", "Temperature", "Keyhole", "Keyhole",
-    "Two-word boss", "Chat brain", "Chat brain", "Three-word boss", "Three-word boss"];
+    "Two-word boss", "Three-word boss", "Three-word boss", "Chat brain", "Chat brain"];
 
-  // The v2 order: the two-word boss (stage6 generator) now comes 5th, right after the keyhole; Chat brain is 6th.
+  // The v2 order: two-word boss (stage6 generator) 5th, three-word boss (stage7 generator) 6th, Chat brain (stage5 generator) 7th.
   var STAGES = [
     { id: "count", make: stage1 }, { id: "greedy", make: stage2 }, { id: "temp", make: stage3 },
-    { id: "keyhole", make: stage4 }, { id: "boss2", make: stage6 }, { id: "chat", make: stage5 }, { id: "boss3", make: stage7 }
+    { id: "keyhole", make: stage4 }, { id: "boss2", make: stage6 }, { id: "boss3", make: stage7 }, { id: "chat", make: stage5 }
   ];
   var api = { STAGES: STAGES, FINAL: finalStage, modelFor: modelFor, vocabOf: vocabOf, chatAnswer: chatAnswer, sameQuestion: sameQuestion,
     sharesAt: sharesAt, boss3Case: boss3Case, boss3Pools: boss3Pools, MAX_NEW: MAX_NEW, M: M };
