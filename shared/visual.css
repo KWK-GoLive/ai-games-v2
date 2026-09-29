@@ -333,3 +333,11 @@ button, .choice, .tile, .tv-slider, summary { touch-action: manipulation; }   /*
   .ph-head { padding: 5px 10px; }
   .ph-tab { min-height: 44px; }
 }
+/* files on chat messages: 📎 files Ploy shares, and file cards the model sends back */
+.b-body { display: flex; flex-direction: column; gap: 4px; }
+.b-files { display: flex; flex-wrap: wrap; gap: 4px; }
+.b-file { display: inline-flex; align-items: center; min-height: 32px; padding: 2px 8px; border-radius: 999px; font-size: .8rem; font-weight: 600;
+  background: rgba(255,255,255,.85); color: var(--ink); text-decoration: none; border: 1px solid rgba(0,0,0,.12); overflow-wrap: anywhere; }
+a.b-file:hover { text-decoration: underline; }
+.b .v-file { margin: 4px 0 0; color: var(--ink); }
+@media (pointer: coarse) { .b-file { min-height: 44px; } }

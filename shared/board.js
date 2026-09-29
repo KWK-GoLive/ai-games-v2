@@ -19,7 +19,7 @@
   var refresh = Math.max(3, Number(CFG.BOARD_REFRESH_SECONDS) || 5) * 1000;
   var STAGE_NAMES = {
     warmup: ["What comes next?"],
-    llm2: ["Count it", "Greedy writer", "Temperature", "Keyhole", "Two-word boss", "Chat brain", "Three-word boss"],
+    llm2: ["Count it", "Greedy writer", "Temperature", "Keyhole", "Two-word boss", "Three-word boss", "Chat brain"],
     llmfinal: ["All skills"],
     agent2: ["Which app?", "File search", "Web search", "Calculator", "File maker", "Hidden orders", "Permissions"],
     agentfinal: ["Ploy's memo"]
