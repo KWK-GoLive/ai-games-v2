@@ -18,16 +18,21 @@
     files: { icon: "📂", name: "File search" },
     web: { icon: "🌐", name: "Web search" },
     maker: { icon: "🗂️", name: "File maker" },
-    code: { icon: "💻", name: "Code runner" },
+    code: { icon: "💻", name: "Code tool" },
     mail: { icon: "✉️", name: "Email" }
   };
   var WHO = {
     human: { icon: "👩", name: "Ploy (human)" },
     model: { icon: "🤖", name: "Model (you)" },
-    apps: { icon: "🧰", name: "Apps (harness)" }
+    apps: { icon: "🧰", name: "Apps" }
   };
 
-  /* opts: { apps: ["calc", "files", ...], humanName, modelName, compactAt (px) } */
+  /* the café's real files (in agent/files/): a 📎 chip on a message opens them */
+  var REAL_FILES = ["moonbean_sales_aug2026.csv", "Moonbean_staff_handbook.pdf", "Moonbean_staff_handbook.docx", "Moonbean_menu_2026.docx", "Supplier_letter_Aug2026.pdf"];
+  var FILE_LABELS = { "moonbean_sales_aug2026.csv": "Sales 1–10 Aug (CSV)", "Moonbean_staff_handbook.pdf": "Staff handbook (PDF)", "Moonbean_staff_handbook.docx": "Staff handbook (Word)",
+    "Moonbean_menu_2026.docx": "Menu (Word)", "Supplier_letter_Aug2026.pdf": "Supplier letter (PDF)", "bobby_notes.csv": "Bobby's notes (CSV)" };
+
+  /* opts: { apps: ["calc", "files", ...], humanName, modelName, filesBase ("files/"), compactAt (px) } */
   function Phones(container, opts) {
     opts = opts || {};
     var apps = (opts.apps || ["calc", "files", "web", "maker"]).slice();
@@ -89,10 +94,18 @@
     }
     function scroll(el) { try { el.scrollTop = el.scrollHeight; } catch (e) { /* hidden */ } }
 
+    function fileChip(name) {
+      var real = REAL_FILES.indexOf(name) >= 0;
+      var label = "📎 " + (FILE_LABELS[name] || name);
+      return real ? h("a", { class: "b-file", href: (opts.filesBase || "files/") + name, target: "_blank", rel: "noopener", title: name + " (opens the real file)", text: label })
+        : h("span", { class: "b-file", title: name, text: label });
+    }
     function content(m) {
-      if (m.el) return typeof m.el === "function" ? m.el() : m.el.cloneNode(true);
-      if (m.kind === "call") return h("code", { class: "ph-code", text: m.text });
-      return h("span", { text: m.text });
+      var base = m.el ? (typeof m.el === "function" ? m.el() : m.el.cloneNode(true))
+        : m.kind === "call" ? h("code", { class: "ph-code", text: m.text }) : m.text ? h("span", { text: m.text }) : null;
+      if (!m.files && !m.attach) return base || h("span", { text: "" });
+      // a message with files: the text, then the 📎 files shared (Ploy) or the file card sent (the model's reply)
+      return h("span", { class: "b-body" }, base, m.files ? h("span", { class: "b-files" }, m.files.map(fileChip)) : null, m.attach ? m.attach() : null);
     }
     function bubble(side, m, label, cls) {
       var b = h("div", { class: "b " + side + (cls ? " " + cls : "") + (m.kind ? " k-" + m.kind : "") },

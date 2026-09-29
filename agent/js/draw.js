@@ -43,20 +43,34 @@
   }
   function hitsEl(list) { return function () { return h("span", {}, list.map(function (x, i) { return h("span", { class: i ? "ph-hit" : "" }, h("b", { text: x.head }), " " + x.body); })); }; }
 
+  /* a made file as a card (view / download), for the File maker's result and for the reply that sends it to Ploy */
+  function fileCard(f, note) {
+    var spec = f.preview.kind === "sheet" ? { type: "xlsx", sheets: [{ name: "Sheet1", rows: f.preview.rows }] } : { type: "docx", blocks: [{ h1: f.preview.title }].concat(f.preview.paragraphs.map(function (p) { return { p: p }; })) };
+    return function () { return V.fileActions({ name: f.name, spec: spec, note: note, download: function () { T.F.download(f.bytes, f.name, f.mime); } }); };
+  }
+  /* Ploy's request, with the café files she shares (📎) */
+  function ask(P, it) { P.add({ from: "human", to: "model", text: it.ask, files: it.files || null }); }
+
   /* ---------- Stage 1: which app? ---------- */
   function drawToolpick(it, box, api, P) {
     var ans = {};
-    P.add({ from: "human", to: "model", text: it.ask });
+    ask(P, it);
     var step2 = h("div");
+    var made = it.madeFile ? T.makeFile(root.AGENT_ITEMS.spec(it.madeFile.type, it.madeFile.name, it.madeFile.content)) : null;
     var c1 = choices(it.tools, function (v) {
       ans.tool = v;
-      if (v !== it.tool) P.note(v === "none" ? "✗ You chose to answer without an app. Teacher's replay: here is what the right choice would give." : "✗ Not the best app here. Teacher's replay: this is what " + (it.tool === "none" ? "answering yourself" : "asking the right app") + " would give (the real harness only runs what the model asks for).");
-      if (it.tool !== "none") {
-        P.add({ from: "model", to: it.tool, text: it.call });
-        P.add({ from: it.tool, to: "model", text: it.result });
-      }
+      if (v !== it.tool) P.note(v === "none" ? "✗ You chose to answer without an app. Teacher's replay: here is what the right choice would give." : "✗ Not the best app here. Teacher's replay: this is what " + (it.tool === "none" ? "answering yourself" : "asking the right app") + " would give (real apps only run what the model asks for).");
+      (it.calls || []).forEach(function (c, i) {
+        P.add({ from: "model", to: it.tool, text: c[0] });
+        P.add({ from: it.tool, to: "model", text: c[1], el: made && i === 0 ? function () { return h("span", { class: "b-body" }, h("span", { text: c[1] }), fileCard(made, "made by the File maker")()); } : null });
+      });
       step2.appendChild(move(2, it.tool === "none" ? "Now write your reply to Ploy." : "The app sent its result (see your phone). Now reply to Ploy.",
-        (c2 = choices(it.replies, function (r) { ans.reply = r; P.add({ from: "model", to: "human", text: it.replies.filter(function (x) { return x.value === r; })[0].label }); api.submit(ans); }, { oneCol: true })).el));
+        (c2 = choices(it.replies, function (r) {
+          ans.reply = r;
+          var label = it.replies.filter(function (x) { return x.value === r; })[0].label;
+          P.add({ from: "model", to: "human", text: label, attach: made && /^Done/.test(label) ? fileCard(made, "sent to Ploy") : null });   // the file goes with the reply
+          api.submit(ans);
+        }, { oneCol: true })).el));
     });
     var c2 = null;
     box.appendChild(move(1, "Which app do you ask?", c1.el));
@@ -67,7 +81,7 @@
   /* ---------- Stage 2: file search ---------- */
   function drawFilesearch(it, box, api, P) {
     var ans = { words: [] }, sel = [], searches = 0, hits = [];
-    P.add({ from: "human", to: "model", text: it.ask });
+    ask(P, it);
     var status = h("p", { class: "small muted", text: "Tap 1 to 3 words, then Search." });
     var go = h("button", { class: "btn primary", type: "button", text: "🔍 Search", disabled: true });
     var c1 = choices(it.chips.map(function (w) { return { value: w, label: w }; }), function (v, on) {
@@ -81,7 +95,7 @@
       searches++; ans.words = sel.slice();
       hits = it.search(sel);
       P.add({ from: "model", to: "files", text: "search: " + sel.join(" ") });
-      P.add({ from: "files", to: "model", text: hits.length ? "" : "No matching pieces.", el: hits.length ? hitsEl(hits.map(function (x, i) { return { head: (i + 1) + ". " + x.where + ", “" + x.piece.title + "”:", body: x.piece.text.slice(0, 60) + "…" }; })) : null });
+      P.add({ from: "files", to: "model", text: hits.length ? "" : "No matching pieces.", el: hits.length ? hitsEl(hits.map(function (x, i) { return { head: (i + 1) + ". " + x.where + ", “" + x.piece.title + "”:", body: x.piece.text.slice(0, 60) + "… (matched: " + x.matched.join(", ") + ")" }; })) : null });
       clear(step2);
       if (!hits.length) { step2.appendChild(h("p", { class: "feedback bad", text: "Nothing found. Try other words." })); return; }
       if (searches >= 2) { go.disabled = true; c1.btns.forEach(function (b) { b.disabled = true; }); }
@@ -107,14 +121,14 @@
   /* ---------- Stage 3: web search ---------- */
   function drawWebsearch(it, box, api, P) {
     var ans = {};
-    P.add({ from: "human", to: "model", text: it.ask });
+    ask(P, it);
     var step2 = h("div"), step3 = h("div"), c2 = null, c3 = null;
     var c1 = choices(it.queries.map(function (q) { return { value: q, label: "🔍 " + q }; }), function (q) {
       ans.query = q;
       var hits = it.search(q);
       P.add({ from: "model", to: "web", text: "search the web: " + q });
       P.add({ from: "web", to: "model", text: hits.length ? "" : "No results.", el: hits.length ? hitsEl(hits.map(function (x, i) { return { head: (i + 1) + ". " + x.page.title, body: "(" + x.page.site + ", " + x.page.date + ") " + x.snippet }; })) : null });
-      if (!hits.length) { step2.appendChild(h("p", { class: "feedback bad", text: "No results: the harness can't find anything for that." })); api.submit(ans); return; }
+      if (!hits.length) { step2.appendChild(h("p", { class: "feedback bad", text: "No results for that search." })); api.submit(ans); return; }
       c2 = choices(hits.map(function (x) { return { value: x.page.id, label: h("span", {}, h("b", { text: x.page.title }), h("br"), h("span", { class: "small muted", text: x.page.site + " · " + x.page.who + " · " + x.page.date })) }; }), function (id) {
         ans.open = id;
         var pg = T.page(id);
@@ -126,7 +140,6 @@
       }, { oneCol: true });
       step2.appendChild(move(2, "Which page do you open? (Look at who wrote it and when.)", c2.el));
     }, { oneCol: true });
-    box.appendChild(h("p", { class: "small muted", text: "This is a small made-up internet for the game. Only the Revenue Department page quotes a real site (checked 28 Sep 2026)." }));
     box.appendChild(move(1, "What do you search for?", c1.el));
     box.appendChild(step2); box.appendChild(step3);
     return { collect: function () { return ans; }, reveal: function () { c1.mark(it.key.query); if (c2) c2.mark(it.key.page); if (c3) c3.mark(it.key.answer); } };
@@ -137,10 +150,10 @@
     var ans = { tokens: [] };
     if (it.show === "rows") {
       var rows = T.totals().rows.filter(function (r) { return r.item === it.rowsItem; });
-      P.note("Earlier in this chat, the Code runner showed you the " + it.rowsItem + " rows:\n" + rows.map(function (r) { return r.date + "  " + r.item + "  " + r.qty + " × " + r.price + " = " + r.total; }).join("\n"));
+      P.note("Earlier in this chat you looked at the " + it.rowsItem + " rows of the sales file:\n" + rows.map(function (r) { return r.date + "  " + r.item + "  " + r.qty + " × " + r.price + " = " + r.total; }).join("\n"));
     }
     if (it.dayTotals) P.note("Earlier in this chat: sales per day\n" + it.dayTotals.map(function (d) { return d[0] + ": " + T.fmt(d[1]); }).join("\n"));
-    P.add({ from: "human", to: "model", text: it.ask });
+    ask(P, it);
     var line = h("div", { class: "built", "aria-live": "polite" });
     function paint() { line.textContent = ans.tokens.length ? ans.tokens.join(" ") : "(tap below)"; }
     paint();
@@ -169,7 +182,7 @@
   /* ---------- Stage 5: file maker ---------- */
   function drawMaker(it, box, api, P) {
     var ans = {};
-    P.add({ from: "human", to: "model", text: it.ask });
+    ask(P, it);
     var send = h("button", { class: "btn primary", type: "button", text: "Send to 🗂️ File maker", disabled: true });
     function ready() { send.disabled = !(ans.type && ans.name && ans.content); }
     function group(title, list, key) {
@@ -185,12 +198,10 @@
       var f = it.make(ans);
       var label = it.contents.filter(function (x) { return x.value === ans.content; })[0].label;
       P.add({ from: "model", to: "maker", text: "make file: " + f.name + "\ncontents: " + label });
-      var spec = f.preview.kind === "sheet" ? { type: "xlsx", sheets: [{ name: "Sheet1", rows: f.preview.rows }] } : { type: "docx", blocks: [{ h1: f.preview.title }].concat(f.preview.paragraphs.map(function (p) { return { p: p }; })) };
-      var card = function () { return V.fileActions({ name: f.name, spec: spec, note: "made by the File maker", download: function () { T.F.download(f.bytes, f.name, f.mime); } }); };
-      P.add({ from: "maker", to: "model", text: "", el: card });
+      P.add({ from: "maker", to: "model", text: "", el: fileCard(f, "made by the File maker") });
       var replies = it.replies.map(function (x) { return { value: x.value, label: it.replyLabel(x.value, ans) }; });
       step2.appendChild(move(2, "Check the file (👁 View here in your phone), then reply to Ploy.", (c4 = choices(replies, function (v) {
-        ans.reply = v; P.add({ from: "model", to: "human", text: replies.filter(function (x) { return x.value === v; })[0].label }); api.submit(ans);
+        ans.reply = v; P.add({ from: "model", to: "human", text: replies.filter(function (x) { return x.value === v; })[0].label, attach: fileCard(f, "sent to Ploy") }); api.submit(ans);
       }, { oneCol: true })).el));
     });
     box.appendChild(move(1, "Tell the File maker what to make.", h("div", { class: "stack" }, g1.el, g2.el, g3.el, h("div", { class: "row end" }, send))));
@@ -201,7 +212,7 @@
   /* ---------- Stage 6: hidden orders ---------- */
   function drawInject(it, box, api, P) {
     var ans = { bad: [] };
-    P.add({ from: "human", to: "model", text: it.ask });
+    ask(P, it);
     P.add({ from: "model", to: it.app, text: it.call });
     P.add({ from: it.app, to: "model", text: it.sentences.join("\n") });
     var c1 = choices(it.sentences.map(function (s, i) { return { value: i, label: "“" + s + "”" }; }), function (v, on) {
@@ -250,5 +261,5 @@
   }
   function wrap(fn) { return function (rng) { return fn(rng).map(function (it) { it.render = drawer(it); return it; }); }; }
 
-  root.AGENT_DRAW = { drawer: drawer, wrap: wrap, choices: choices, move: move, DRAW: DRAW, APPS_FOR: APPS_FOR };
+  root.AGENT_DRAW = { drawer: drawer, wrap: wrap, choices: choices, move: move, fileCard: fileCard, DRAW: DRAW, APPS_FOR: APPS_FOR };
 })(typeof window !== "undefined" ? window : globalThis);
