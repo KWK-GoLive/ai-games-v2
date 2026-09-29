@@ -75,7 +75,7 @@ def do_lesson(page, n, stats):
             # a wrong try first: the feedback must say how many pieces were right
             page.locator(".tile").filter(has_text="dog").first.click(); page.locator(".tile").filter(has_text="runs").first.click()
             page.locator("button:has-text('Submit')").first.click(); page.wait_for_timeout(60)
-            check("first 1 piece is right" in page.locator(".feedback.bad").last.inner_text(), "L2 builder: a wrong try says how much was right")
+            check("first 1 word is right" in page.locator(".feedback.bad").last.inner_text(), "L2 builder: a wrong try says how much was right")
             page.locator("button:has-text('Clear')").first.click()
             for w in key: page.locator(".tile").filter(has_text=w).first.click()
             page.locator("button:has-text('Submit')").first.click(); page.wait_for_timeout(60)
@@ -107,7 +107,7 @@ def play_stage(page, sno, right=True):
             secs = int(page.locator(".hud + .row b, .row b").first.inner_text().rstrip("s"))
             check(abs(secs - round(lim * 1.5)) <= 1, f"stage {sno}: the timer is 1.5x ({secs}s for a {lim}s item)")
             if sno in (3, 5, 7): no_hscroll(page, f"stage {sno} item"); shot(page, f"stage{sno}-item")
-            if sno in (5, 7): check(page.locator(".win-badge").count() == 1 and ("2-WORD" if sno == 5 else "3-WORD") in page.locator(".win-badge").inner_text(), f"stage {sno} item shows the window badge")
+            if sno in (5, 6): check(page.locator(".win-badge").count() == 1 and ("2-WORD" if sno == 5 else "3-WORD") in page.locator(".win-badge").inner_text(), f"stage {sno} item shows the window badge")
         if right: page.evaluate("ARENA_TEST.submit(ARENA_TEST.item.key)")
         else: page.evaluate("ARENA_TEST.submit(null)")
         page.wait_for_timeout(60)
@@ -190,7 +190,7 @@ with sync_playwright() as p:
         if i in (4, 10): no_hscroll(page, f"final item {i+1}")
         page.evaluate("ARENA_TEST.submit(ARENA_TEST.item.key)"); page.wait_for_timeout(50)
         page.locator(".result-card button").first.click()
-    check(len(skills) == 12 and "count it" in skills[0].lower() and "three-word" in skills[11].lower(), "final: 12 items in skill order: " + str(skills))
+    check(len(skills) == 12 and "count it" in skills[0].lower() and "three-word" in skills[9].lower() and "chat brain" in skills[11].lower(), "final: 12 items in skill order: " + str(skills))
     page.locator("button:has-text('See my results')").first.click(); page.wait_for_timeout(1500)
     check(board("llmfinal", "T1")["players"][0]["items"] == 12, "final result on the scoreboard (12 items)")
     # front page ticks

@@ -127,8 +127,8 @@ D.worlds.forEach(function (w, wi) {
   check(hits === 40, "two-word boss in world " + w.id + " has a new pair (back-off to 1 word) in every run: " + hits + "/40");
 });
 var sizes = L.STAGES.map(function (st) { return st.make(D, rng(5)).length; });
-check(JSON.stringify(sizes) === "[5,3,5,6,3,4,6]", "stage sizes 5,3,5,6,3,4,6: " + sizes);
-check(JSON.stringify(L.STAGES.map(function (x) { return x.id; })) === '["count","greedy","temp","keyhole","boss2","chat","boss3"]', "stage order");
+check(JSON.stringify(sizes) === "[5,3,5,6,3,6,4]", "stage sizes 5,3,5,6,3,6,4: " + sizes);
+check(JSON.stringify(L.STAGES.map(function (x) { return x.id; })) === '["count","greedy","temp","keyhole","boss2","boss3","chat"]', "stage order");
 
 /* ---------- 3. the lessons say true things about their texts ---------- */
 var T = LS.TEXTS, C = LS.CASES;

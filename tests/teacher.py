@@ -85,10 +85,10 @@ def per_item(pg, what):
         if p: check(p["live"]["phase"] == "item" and p["live"]["points"] == e["points"] and p["livePoints"] == p["points"] + e["points"], f"{what}: live points {e['points']} (board {p['live']}, {p['livePoints']})")
     state["n"] += 1
     if state["n"] == 9 and "pg" in teacher:   # mid-game: the teacher view shows the same thing after its own refresh
-        tp = teacher["pg"]; before = teacher_row(NICK, 2)
+        tp = teacher["pg"]; before = teacher_row(NICK, 2); stamp0 = tp.locator("#updated").inner_text()
         tp.wait_for_timeout(3600)
         row = teacher_row(NICK, 2)
-        check(row != before, f"teacher view refreshed by itself ({before!r} -> {row!r})")
+        check(tp.locator("#updated").inner_text() != stamp0, f"teacher view refreshed by itself ({stamp0!r})")   # (the row itself may already have been up to date)
         want = f"S{e['stage']} ▶ {e['item']}/" if e["item"] else "S"
         check(want in row, f"teacher view shows {want!r} for {NICK}: {row!r}")
         if SHOTS: tp.screenshot(path=os.path.join(SHOTS, "teacher-1280x720.png"))
