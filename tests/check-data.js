@@ -64,7 +64,7 @@ function checkItem(it, where) {
   else if (it.ctx) { check(top(follow(seqs, [it.ctx])) === it.key, where + ": top word after " + it.ctx); }
   if (it.kind === "tiles") check(JSON.stringify(greedy(seqs, it.seed, it.k, 8)) === JSON.stringify(it.key), where + ": greedy continuation of " + it.seed.join(" ") + " k=" + it.k);
   if (it.prefix && !it.backoff) { var f4 = follow(seqs, it.prefix.slice(-it.k)); check((f4.length ? top(f4) : "none") === it.key, where + ": keyhole " + it.k + " " + it.prefix.join(" ")); }
-  if (it.prefix && it.backoff) { var r = backoff(seqs, it.prefix, 3); check(top(r.f) === it.key, where + ": 3-word boss " + it.prefix.join(" ")); }
+  if (it.prefix && it.backoff) { var r = backoff(seqs, it.prefix, it.k); check(top(r.f) === it.key, where + ": up-to-" + it.k + "-word keyhole with back-off " + it.prefix.join(" ")); }
   if (it.kind === "chat") {
     var cs = chatSeqsOf(it.chat), ws = ["[q]"].concat(toks(it.question), ["[a]"]), out = [];
     for (var i = 0; i < 14; i++) { var rr = backoff(cs, ws, 8); if (!rr.f.length) break; var w = top(rr.f); if (w === E0) break; out.push(w); ws.push(w); }
@@ -101,6 +101,18 @@ for (var s = 1; s <= SEEDS; s++) {
   var fin = L.FINAL(D, rng(s * 7));
   check(fin.length === 12, "final has 12 items");
   fin.forEach(function (it, i) { checkItem(it, "seed " + s + " final item " + (i + 1)); });
+  // one model in the final (29 Sep 2026): every question states its keyhole, keyhole questions back off, "No data" is never right
+  [0, 1].forEach(function (i) { check(/^1-word keyhole/.test(fin[i].title), "seed " + s + " final item " + (i + 1) + " states its keyhole"); });
+  var kh = fin.slice(5, 7);
+  check(kh.every(function (it) { return it.skill === "Keyhole" && it.backoff && it.key !== "none"; }), "seed " + s + " final keyhole questions back off and never have No data as the key");
+  check(kh.every(function (it) { return it.options.some(function (o) { return o.value === "none"; }) && it.grade("none").frac === 0; }), "seed " + s + " final keyhole questions keep No data as a wrong option");
+  check(kh[0].k !== kh[1].k, "seed " + s + " the two final keyhole questions use different keyhole sizes");
+  // question 6 must back off (its 3 words are not in the text); question 7: another keyhole size gives a different answer
+  var sq6 = seqsOf(kh[0].world.text);
+  check(kh[0].k === 3 && !follow(sq6, kh[0].prefix.slice(-3)).length && /backs off/.test(kh[0].grade(kh[0].key).explain.join(" ")), "seed " + s + " final keyhole 6 (" + kh[0].prefix.join(" ") + "): the 3 words are not in the text, so it backs off");
+  var sq7 = seqsOf(kh[1].world.text), other = [1, 2, 3].filter(function (x) { return x !== kh[1].k; }).map(function (x) { return top(backoff(sq7, kh[1].prefix, x).f); });
+  check(kh[1].k < 3 && other.some(function (w) { return w !== kh[1].key; }), "seed " + s + " final keyhole 7 (" + kh[1].prefix.join(" ") + "): another keyhole size gives a different answer");
+  check(fin.every(function (it) { return !(it.prefix && !it.backoff); }), "seed " + s + " no strict (no back-off) keyhole question in the final");
   var wu = WU.stage(rng(s * 13));
   check(wu.length === 8, "warm-up has 8 items");
   wu.forEach(function (it, i) {

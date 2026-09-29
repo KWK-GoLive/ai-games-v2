@@ -40,6 +40,7 @@ def mv(pg, n): return pg.locator(".move").nth(n)
 def click_val(loc, v):
     loc.locator(f'.choice[data-value="{v}"]').first.click()
 
+SEEN = {}
 def solve_item(pg, what):
     it = pg.evaluate("""(() => { const it = window.AGENT_LAST_ITEM; const o = { kind: it.kind, key: it.key };
       if (it.kind === 'filesearch') { let best = null; const c = it.chips;
@@ -83,6 +84,14 @@ def solve_item(pg, what):
         click_val(mv(pg, 0), key)
     pg.wait_for_timeout(80)
     phone_rule(pg, what)
+    # the file the app opens is named on the model's request, in the Model phone (right) and the Apps phone (left)
+    uses = pg.evaluate("""(() => { const it = window.AGENT_LAST_ITEM; return (it.kind === 'calc' && (it.solution || []).some(t => /SUM/.test(t))) || it.kind === 'filesearch' || (it.kind === 'maker' && !/memo/i.test(it.key.content))
+      || (it.kind === 'toolpick' && (it.tool === 'files' || it.tool === 'maker' || /SUM/.test(it.call || ''))) || (it.kind === 'inject' && it.app === 'files'); })()""")
+    if uses:
+        w = "(() => { const all = [...document.querySelectorAll('.phones')]; return all[all.length - 1]; })()"
+        n = pg.evaluate(f"[{w}.querySelectorAll('.ph-model .b.right .b-open').length, {w}.querySelectorAll('.ph-apps .b.left .b-open').length]")
+        check(n[0] >= 1 and n[1] >= 1, f"{what}: the file the app opens is named on the model's request in both phones ({n})")
+    SEEN.setdefault("practice" if "practice" in what else "test", set()).add(pg.evaluate("(window.AGENT_LAST_ITEM.ask || window.AGENT_LAST_ITEM.plan || '').toLowerCase()"))   # compared by the question text
     if it["made"] and (k == "maker" or "Done" in (pg.evaluate("(() => { const b = [...document.querySelectorAll('.ph-human .b.left')]; return b.length ? b[b.length - 1].textContent : ''; })()") or "")):
         check(pg.evaluate("(() => { const all = [...document.querySelectorAll('.phones')]; const w = all[all.length - 1]; return w.querySelectorAll('.ph-human .b.left .v-file').length; })()") >= 1, f"{what}: the made file arrives in Ploy's phone with the reply")
 
@@ -165,6 +174,8 @@ def main():
             ctx.close()
         br.close()
     httpd.shutdown()
+    both = SEEN.get("practice", set()) & SEEN.get("test", set())
+    check(len(SEEN.get("practice", set())) >= 7 and not both, f"no lesson practice question was also a stage question in this run ({sorted(both)})")
     print(f"{len(fails)} check(s) FAILED" if fails else "All agent browser checks passed")
     sys.exit(1 if fails else 0)
 

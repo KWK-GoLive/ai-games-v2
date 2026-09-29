@@ -207,7 +207,12 @@ with sync_playwright() as p:
         page.wait_for_timeout(80)
         skills.append(page.locator(".kicker", has_text="Skill:").first.inner_text())
         if i in (4, 10): no_hscroll(page, f"final item {i+1}")
+        if i in (5, 6):   # one model in the final: the keyhole questions back off and say so
+            t = page.locator(".card").filter(has_text="Skill:").first.inner_text()
+            check(("backs off" in t or "only the last word" in t) and "No data" in t, f"final keyhole item {i+1} says it backs off and offers No data")
+            no_hscroll(page, f"final item {i+1}"); shot(page, f"final-keyhole-{i+1}")
         page.evaluate("ARENA_TEST.submit(ARENA_TEST.item.key)"); page.wait_for_timeout(50)
+        if i in (5, 6): shot(page, f"final-keyhole-{i+1}-result")
         page.locator(".result-card button").first.click()
     check(len(skills) == 12 and "count it" in skills[0].lower() and "three-word" in skills[9].lower() and "chat brain" in skills[11].lower(), "final: 12 items in skill order: " + str(skills))
     page.locator("button:has-text('See my results')").first.click(); page.wait_for_timeout(1500)

@@ -95,6 +95,12 @@ for (var s = 1; s <= 120; s++) {
       check(it.grade(null).frac === 0 || it.kind === "permission", "no answer scores 0");
     });
   });
+  I.PRACTICE.forEach(function (mk, li) {
+    var it = mk(rng(s * 29 + li)); n++;
+    check(it.grade(fullAnswer(it)).frac === 1, "lesson " + (li + 1) + " practice " + it.kind + " " + it.id + ": the right moves score full marks");
+    if (it.kind === "calc") check(it.chips.every(function (c) { var r = I.evalChips([c]); return /^SUM\(/.test(c) || !(r.ok && Math.abs(r.value - it.key.value) < 0.01); }), "practice " + it.id + ": no single number chip is already the answer");
+    check(it.grade(it.sample(rng(n))).frac >= 0 && (it.grade(null).frac === 0 || it.kind === "permission"), "practice " + it.id + ": random / no answer graded");
+  });
   var steps = R.steps(rng(s));
   check(steps.length === 12, "Agent Arena has 12 steps");
   steps.forEach(function (st) {
@@ -130,16 +136,21 @@ var mk = I.makerItem(I.MAKEQ[0], rng(3)), made = { type: "csv", name: "file1", c
 check(mk.replyLabel("ok", made).indexOf("file1.csv") >= 0 && mk.replyLabel("ok", made).indexOf("every row") >= 0, "File maker: the honest reply describes the file really made (file1.csv, every row)");
 
 /* ---------- 4. the facts in the right answers ---------- */
-I.PICKS.forEach(function (p) { if (p.tool === "calc") { var r = T.calculator(p.call).value; check(p.replies[0][0].indexOf(T.fmt(r)) >= 0, "pick " + p.id + ": the right reply shows the tool's result " + T.fmt(r)); } });
-check(1284 * 37 === 47508, "1,284 × 37 = 47,508");
-I.FILEQ.forEach(function (f) {
+var PP = I.PRACTICE_POOLS, both = function (a, b) { return a.concat(b); };
+both(I.PICKS, PP.PICKS).forEach(function (p) { if (p.tool === "calc") { var r = T.calculator(p.call).value; check(p.replies[0][0].indexOf(T.fmt(r)) >= 0, "pick " + p.id + ": the right reply shows the tool's result " + T.fmt(r)); } });
+check(1284 * 37 === 47508 && 2356 * 48 === 113088, "1,284 × 37 = 47,508 (lesson 1) and 2,356 × 48 = 113,088 (stage 1)");
+both(I.PICKS, PP.PICKS).forEach(function (p) { if (p.tool === "maker") { var rows = T.totals().rows.filter(function (r) { return r.item === p.item; });
+  check(!!I.CONTENTS[{ Latte: "latte", Mocha: "mocha", Americano: "americano", "Green tea": "greentea", Brownie: "brownie" }[p.item]], "maker pick " + p.id + ": the made file has contents");
+  check(rows.length === p.rowCount && rows.reduce(function (a, r) { return a + r.total; }, 0) === p.sum && p.replies[0][0].indexOf(T.fmt(p.sum)) >= 0 && p.call.indexOf(String(p.rowCount) + " ") < 0, "maker pick " + p.id + ": the app counts the rows (" + p.rowCount + ", " + T.fmt(p.sum) + " baht); the request doesn't guess them"); }
+  if (p.page) check(p.replies[0][0].indexOf(T.page(p.page).site) >= 0 && T.webSearch(p.call.replace(/^search the web: /, ""), 4).some(function (x) { return x.page.id === p.page; }), "web pick " + p.id + ": the search finds the page and the right reply names its site"); });
+both(I.FILEQ, PP.FILEQ).forEach(function (f) {
   var p = T.piece(f.key), right = f.answers[0][0];
   var m = /\((Handbook|Supplier letter|Menu)[^)]*?(page|section) (\d)\)/.exec(right);
   check(m && +m[3] === (p.page || p.section), "file question " + f.id + ": the right answer cites the right page/section");
   (right.match(/\d+/g) || []).filter(function (x) { return x !== m[3]; }).forEach(function (num) { check(p.text.indexOf(num) >= 0 || (f.id === "iced" && num === "75"), "file question " + f.id + ": " + num + " is in the source piece"); });
 });
 check(65 + 10 === 75, "iced latte 65 + 10 = 75");
-I.WEBQ.forEach(function (w) {
+both(I.WEBQ, PP.WEBQ).forEach(function (w) {
   var p = T.page(w.key), right = w.answers[0][0];
   (right.match(/\d+(?:,\d+)?/g) || []).filter(function (x) { return !/^20\d\d$|^1[05]$|^\d$/.test(x); }).forEach(function (num) { check(p.text.indexOf(num) >= 0 || right.indexOf(p.date) >= 0, "web question " + w.id + ": " + num + " is on the source page"); });
   check(right.indexOf(p.site) >= 0, "web question " + w.id + ": the right answer names the site " + p.site);
@@ -147,9 +158,47 @@ I.WEBQ.forEach(function (w) {
 check(I.evalChips(["(", "520", "−", "480", ")", "×", "15"]).value === 600 && Math.abs(21445 * 1.07 - R.numbers.withVat) < 0.001 && R.numbers.extra === 600, "arena numbers 22,946.15 and 600");
 var byItem = I.CONTENTS.byItem.rows(); check(byItem.length === 7 && byItem[1][0] === "Latte" && byItem[1][1] === 8580, "file maker: totals by item start with Latte 8,580");
 check(I.CONTENTS.latte.rows().length === 9 && I.CONTENTS.byDay.rows().length === 11, "file maker: 8 Latte rows / 10 days (+ header)");
-I.INJQ.forEach(function (q) { q.result.forEach(function (x, i) { var order = /\bAI\b|SYSTEM|Do not tell/.test(x); check(order === (q.bad.indexOf(i) >= 0), "hidden order " + q.id + " sentence " + (i + 1) + (order ? " is" : " is not") + " marked bad"); }); });
+both(I.INJQ, PP.INJQ).forEach(function (q) { if (q.app === "web") { var wp = D.web.filter(function (w) { return q.call.indexOf(w.url.replace(/^https:\/\//, "")) >= 0; })[0]; check(wp && q.result.every(function (x) { return wp.text.indexOf(x) >= 0; }), "hidden order " + q.id + ": the page text is exactly what the app returns"); } q.result.forEach(function (x, i) { var order = /\bAI\b|SYSTEM|Do not tell/.test(x); check(order === (q.bad.indexOf(i) >= 0), "hidden order " + q.id + " sentence " + (i + 1) + (order ? " is" : " is not") + " marked bad"); }); });
 var f = T.makeFile(I.spec("xlsx", "t", "byItem")); check(f.bytes[0] === 0x50 && f.bytes[1] === 0x4b, "the File maker writes a real zip-based .xlsx");
 var d = T.makeFile(I.spec("docx", "t", "memoLatte")); check(d.bytes[0] === 0x50 && d.name === "t.docx", "…and .docx");
 
+/* ---------- 5. no repeats (29 Sep 2026): teaching (lesson 1 cases + worked examples + practice) vs tests (stages + Agent Arena) ---------- */
+var L = require("../agent/js/lessons.js");
+var c1 = L.CASES.calculator.script[3], raw1 = (RAW.calculator.steps || RAW.calculator.log)[1].content.split("\n");
+check(c1.text.indexOf(raw1.slice(0, 5).join("\n") + "\n31 lines (1 header + 30 rows)") === 0 && raw1[6].indexOf("31 ") === 0 && raw1[5] === "---", "case 1 shows exactly the 5 lines the tool returned, then 31 lines = 1 header + 30 rows");
+
+var norm = function (x) { return String(x).toLowerCase().replace(/[^a-z0-9]+/g, " ").trim(); };
+var teachAsks = [], testAsks = [];
+Object.keys(L.CASES).forEach(function (k) { L.CASES[k].script.forEach(function (m) { if (m.from === "human") teachAsks.push(m.text); }); });
+(L.EXAMPLES || []).forEach(function (x) { teachAsks.push(x); });
+Object.keys(PP).forEach(function (k) { PP[k].forEach(function (x) { teachAsks.push(x.ask || x.plan); }); });
+[I.PICKS, I.FILEQ, I.WEBQ, I.CALCQ, I.MAKEQ, I.INJQ, I.PERMQ].forEach(function (pool) { pool.forEach(function (x) { testAsks.push(x.ask || x.plan); }); });
+R.steps(rng(1)).forEach(function (st) { testAsks.push(st.title); }); testAsks.push(R.TASK);
+teachAsks.forEach(function (a) { check(testAsks.map(norm).indexOf(norm(a)) < 0, "no teaching question is also a test question: " + a.slice(0, 60)); });
+// the same source or the same answer value must not be both taught and tested
+var teachKeys = [].concat(PP.FILEQ.map(function (x) { return "piece:" + x.key; }), PP.WEBQ.map(function (x) { return "page:" + x.key; }), PP.PICKS.filter(function (p) { return p.page; }).map(function (p) { return "page:" + p.page; }),
+  PP.CALCQ.map(function (x) { return "value:" + x.value; }), PP.PICKS.filter(function (p) { return p.tool === "files"; }).map(function (p) { return "piece:" + T.fileSearch(p.call.replace(/^search: /, ""), 1)[0].piece.id; }), PP.PICKS.filter(function (p) { return p.tool === "calc"; }).map(function (p) { return "value:" + T.calculator(p.call).value; }),
+  ["piece:h3", "page:w6", "value:8580", "value:" + T.calculator("8580 * 1.07").value, "value:47508"], (L.EXAMPLE_KEYS || []),
+  PP.INJQ.map(function (x) { return "call:" + x.call; }), PP.MAKEQ.map(function (x) { return "content:" + x.content; }), PP.PICKS.filter(function (p) { return p.tool === "maker"; }).map(function (p) { return "content:" + p.item.toLowerCase().replace(/ /g, ""); }));
+var testKeys = [].concat(I.FILEQ.map(function (x) { return "piece:" + x.key; }), I.WEBQ.map(function (x) { return "page:" + x.key; }), I.PICKS.filter(function (p) { return p.page; }).map(function (p) { return "page:" + p.page; }),
+  I.CALCQ.map(function (x) { return "value:" + x.value; }), I.PICKS.filter(function (p) { return p.tool === "calc"; }).map(function (p) { return "value:" + T.calculator(p.call).value; }),
+  I.PICKS.filter(function (p) { return p.tool === "files"; }).map(function (p) { return "piece:" + T.fileSearch(p.call.replace(/^search: /, ""), 1)[0].piece.id; }),
+  I.PICKS.filter(function (p) { return p.tool === "maker"; }).map(function (p) { return "value:" + p.sum; }),
+  [].concat.apply([], I.MAKEQ.map(function (m) { var c = I.CONTENTS[m.content]; return c.rows ? [] : (c.paragraphs.join(" ").match(/\d[\d,.]*/g) || []).map(function (x) { return "value:" + Number(x.replace(/,/g, "")); }); })),
+  ["piece:s1", "piece:s4", "page:w1", "value:" + R.numbers.total, "value:" + R.numbers.withVat, "value:" + R.numbers.extra],
+  I.INJQ.map(function (x) { return "call:" + x.call; }), I.MAKEQ.map(function (x) { return "content:" + x.content; }), I.PICKS.filter(function (p) { return p.tool === "maker"; }).map(function (p) { return "content:" + p.item.toLowerCase().replace(/ /g, ""); }));
+teachKeys.forEach(function (k) { check(testKeys.indexOf(k) < 0, "taught and tested with the same source or value: " + k); });
+L.DEMO_WORDS.forEach(function (w) { var hits = T.fileSearch(w, 3); check(hits.length > 0 && hits.every(function (x) { return testKeys.indexOf("piece:" + x.piece.id) < 0; }), "lesson 2 demo word “" + w + "” finds only pieces no test uses"); });
+// VAT (real case 3) is tested only in the Agent Arena: no stage question uses the VAT page or asks about VAT
+check(!I.WEBQ.some(function (w) { return w.key === "w1"; }) && !I.PICKS.some(function (p) { return p.page === "w1" || /VAT/.test(p.ask); }) && !I.CALCQ.some(function (c) { return /8,?580/.test(c.ask); }) && !I.PERMQ.some(function (p) { return /VAT/.test(p.plan); }), "VAT is not a stage question (taught in case 3, tested only in the Agent Arena)");
+// near-identical wording: word overlap (Jaccard) between any teaching and test question, and between Arena steps and stage questions
+var words = function (x) { var o = {}; norm(x).split(" ").filter(function (w) { return w.length > 2; }).forEach(function (w) { o[w] = 1; }); return Object.keys(o); };
+var jac = function (a, b) { var A = words(a), B = words(b), both = A.filter(function (w) { return B.indexOf(w) >= 0; }).length; return both / (A.length + B.length - both || 1); };
+var stageAsks = testAsks.slice(0, testAsks.length - 13), arenaAsks = testAsks.slice(testAsks.length - 13);
+teachAsks.forEach(function (a) { testAsks.forEach(function (b) { check(jac(a, b) < 0.6, "teaching and test questions are not near-identical (" + jac(a, b).toFixed(2) + "): “" + a.slice(0, 50) + "” / “" + b.slice(0, 50) + "”"); }); });
+arenaAsks.forEach(function (a) { stageAsks.forEach(function (b) { check(jac(a, b) < 0.6, "Arena step and stage question are not near-identical: “" + a.slice(0, 50) + "” / “" + b.slice(0, 50) + "”"); }); });
+// the Agent Arena repeats no stage item word for word
+var arenaVals = ["value:" + R.numbers.withVat, "value:" + R.numbers.extra, "piece:s1", "piece:s4"];
+check(!I.CALCQ.some(function (c) { return arenaVals.indexOf("value:" + c.value) >= 0; }) && !I.FILEQ.some(function (f) { return f.key === "s1" && /cost per kg|price/.test(f.ask); }) && !I.INJQ.some(function (q) { return (q.files || []).indexOf(R.LETTER) >= 0; }), "the Agent Arena's calculations, bean price question and hidden order are not stage items");
 console.log(fails ? fails + " of " + checks + " check(s) FAILED" : "All " + checks + " agent data checks passed");
 process.exit(fails ? 1 : 0);
