@@ -341,3 +341,7 @@ button, .choice, .tile, .tv-slider, summary { touch-action: manipulation; }   /*
 a.b-file:hover { text-decoration: underline; }
 .b .v-file { margin: 4px 0 0; color: var(--ink); }
 @media (pointer: coarse) { .b-file { min-height: 44px; } }
+
+/* a step a safer agent would take (not in the real recording) */
+.b.b-safer { border: 2px dashed var(--ink-3); opacity: .92; }
+.b.right.b-safer { border-color: #fff; }
