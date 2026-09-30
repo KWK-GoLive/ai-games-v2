@@ -30,7 +30,8 @@
         renderStep: function (box, api) {
           var holder = h("div"); box.appendChild(holder);
           var P = PH.Phones(holder, { apps: ["calc", "web", "files", "maker"], filesBase: "../agent/files/" });
-          P.add({ from: "human", to: "model", text: R.TASK, files: R.TASK_FILES });
+          P.folder();   // the café's files are in the shared folder: Ploy attaches nothing
+          P.add({ from: "human", to: "model", text: R.TASK });
           for (var j = 0; j < si; j++) S[j].after.forEach(function (m) { P.add(m.file ? Object.assign({}, m, { el: memoCard(S[j].memo) }) : m); });
           if (TEST) window.AGENT_STEP = st;
           if (st.kind === "calc") {
