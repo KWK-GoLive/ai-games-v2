@@ -53,10 +53,12 @@ def solve_item(pg, what):
       if (it.kind === 'inject') o.bad = it.bad;
       o.files = (it.files || []).length; o.made = it.kind === 'maker' || !!it.madeFile;
       return o; })()""")
-    if it["files"]:   # the files Ploy shares are shown as 📎 chips on her message, in her phone AND the model's
-        w = "(() => { const all = [...document.querySelectorAll('.phones')]; return all[all.length - 1]; })()"
-        n = pg.evaluate(f"[{w}.querySelectorAll('.ph-human .b.right .b-file').length, {w}.querySelectorAll('.ph-model .b.left .b-file').length]")
-        check(n[0] >= it["files"] and n[1] >= it["files"], f"{what}: Ploy's shared files shown in both phones ({n})")
+    # the café's files are in the shared folder (a set-up note in the Model phone); Ploy attaches only a NEW file
+    w = "(() => { const all = [...document.querySelectorAll('.phones')]; return all[all.length - 1]; })()"
+    fol = pg.evaluate(f"[...{w}.querySelectorAll('.ph-model .ph-note')].some(n => /shared folder/i.test(n.textContent))")
+    check(fol, f"{what}: the shared-folder set-up note is in the Model phone")
+    att = pg.evaluate(f"[...{w}.querySelectorAll('.ph-human .b.right .b-file')].map(e => e.textContent)")
+    check(not any(x for x in att if any(f in x for f in ("Moonbean_staff_handbook", "Moonbean_menu", "Supplier_letter", "moonbean_sales"))), f"{what}: Ploy doesn't attach files that are in the shared folder ({att})")
     k, key = it["kind"], it["key"]
     if k == "toolpick":
         click_val(mv(pg, 0), key["tool"]); pg.wait_for_timeout(60); click_val(mv(pg, 1), key["reply"])
@@ -155,7 +157,7 @@ def play(ctx, label, W, per_item=None):
         if sidx in (7, 10): no_hscroll(pg, f"@{label} arena step {sidx+1}"); shot(pg, f"agent-arena-step{sidx+1}-{label}")
         if per_item: per_item(pg, f"@{label} arena step {sidx+1}")
         if st["id"] == "reply": check(pg.locator(".ph-human .b.left .v-file").count() >= 1, f"@{label} arena: the memo file arrives in Ploy's phone with the final reply")
-        if sidx == 0: check(pg.locator(".ph-human .b.right a.b-file").count() == 2, f"@{label} arena: Ploy's task shows the 2 shared files as links")
+        if sidx == 0: check(pg.locator(".ph-human .b.right .b-file").count() == 0 and pg.locator(".ph-model .ph-note:has-text('Shared folder')").count() >= 1, f"@{label} arena: the task comes with the shared-folder note, no attachments")
         card = pg.locator(".result-card")
         check("Right" in card.inner_text(), f"@{label} arena step {sidx+1} ({st['id']}) full marks")
         card.locator("button").first.click(); pg.wait_for_timeout(100)

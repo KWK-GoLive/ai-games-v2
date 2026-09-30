@@ -139,9 +139,12 @@ check(mk.replyLabel("ok", made).indexOf("file1.csv") >= 0 && mk.replyLabel("ok",
 var PP = I.PRACTICE_POOLS, both = function (a, b) { return a.concat(b); };
 both(I.PICKS, PP.PICKS).forEach(function (p) { if (p.tool === "calc") { var r = T.calculator(p.call).value; check(p.replies[0][0].indexOf(T.fmt(r)) >= 0, "pick " + p.id + ": the right reply shows the tool's result " + T.fmt(r)); } });
 check(1284 * 37 === 47508 && 2356 * 48 === 113088, "1,284 × 37 = 47,508 (lesson 1) and 2,356 × 48 = 113,088 (stage 1)");
-both(I.PICKS, PP.PICKS).forEach(function (p) { if (p.tool === "maker") { var rows = T.totals().rows.filter(function (r) { return r.item === p.item; });
-  check(!!I.CONTENTS[{ Latte: "latte", Mocha: "mocha", Americano: "americano", "Green tea": "greentea", Brownie: "brownie" }[p.item]], "maker pick " + p.id + ": the made file has contents");
-  check(rows.length === p.rowCount && rows.reduce(function (a, r) { return a + r.total; }, 0) === p.sum && p.replies[0][0].indexOf(T.fmt(p.sum)) >= 0 && p.call.indexOf(String(p.rowCount) + " ") < 0, "maker pick " + p.id + ": the app counts the rows (" + p.rowCount + ", " + T.fmt(p.sum) + " baht); the request doesn't guess them"); }
+both(I.PICKS, PP.PICKS).forEach(function (p) { if (p.tool === "maker") {
+  var C = I.CONTENTS[p.content], made = I.pickCalls(p);
+  check(!!C && C.rows().length - 1 === p.rowCount && (!p.item || C.rows().slice(1).every(function (r) { return r[1] === p.item; })), "maker pick " + p.id + ": the made file has " + p.rowCount + " rows under the header");
+  check(p.call.indexOf(String(p.rowCount) + " ") < 0 && made[0][1].indexOf(String(p.rowCount)) >= 0, "maker pick " + p.id + ": the request doesn't guess the count; the app reports it");
+  check(made[1][0].indexOf("open file: " + p.name + "." + p.type) === 0 && made[1][1] === I.checkText(p.content, p.type) && made[1][1].split("\n")[1] === C.rows()[1].join(","), "maker pick " + p.id + ": the check shows the file's own rows (not a total the app works out)");
+  check(!/baht in total|adds up/.test(p.replies[0][0]), "maker pick " + p.id + ": the right reply claims only what the check showed"); }
   if (p.page) check(p.replies[0][0].indexOf(T.page(p.page).site) >= 0 && T.webSearch(p.call.replace(/^search the web: /, ""), 4).some(function (x) { return x.page.id === p.page; }), "web pick " + p.id + ": the search finds the page and the right reply names its site"); });
 both(I.FILEQ, PP.FILEQ).forEach(function (f) {
   var p = T.piece(f.key), right = f.answers[0][0];
@@ -162,10 +165,23 @@ both(I.INJQ, PP.INJQ).forEach(function (q) { if (q.app === "web") { var wp = D.w
 var f = T.makeFile(I.spec("xlsx", "t", "byItem")); check(f.bytes[0] === 0x50 && f.bytes[1] === 0x4b, "the File maker writes a real zip-based .xlsx");
 var d = T.makeFile(I.spec("docx", "t", "memoLatte")); check(d.bytes[0] === 0x50 && d.name === "t.docx", "…and .docx");
 
+/* practice deals without repeats: a fresh deck shows every question once; two decks in a row never repeat back to back */
+I.PRACTICE.forEach(function (mk, li) { var pool = PP[["PICKS", "FILEQ", "WEBQ", "CALCQ", "MAKEQ", "INJQ", "PERMQ"][li]];
+  I.resetPractice(); var ids = []; for (var j = 0; j < pool.length * 6; j++) ids.push(mk(rng(5000 + j)).id);
+  var first = ids.slice(0, pool.length), back = ids.some(function (v, i) { return i && v === ids[i - 1]; });
+  check(first.filter(function (v, i) { return first.indexOf(v) === i; }).length === pool.length && !back, "lesson " + (li + 1) + " practice: the first " + pool.length + " tries show every question once, and no question comes twice in a row"); });
+var DRSRC = fs.readFileSync(path.join(ROOT, "agent/js/draw.js"), "utf8"), LSRC = fs.readFileSync(path.join(ROOT, "agent/js/lessons.js"), "utf8");
+check(/Teacher's replay \(not your move\)/.test(DRSRC) && /The right move was to answer yourself/.test(DRSRC) && /Not right this time/.test(LSRC) && !/real apps only run what the model asks for/.test(DRSRC), "teacher's-replay wording and the 0% label");
 /* ---------- 5. no repeats (29 Sep 2026): teaching (lesson 1 cases + worked examples + practice) vs tests (stages + Agent Arena) ---------- */
 var L = require("../agent/js/lessons.js");
 var c1 = L.CASES.calculator.script[3], raw1 = (RAW.calculator.steps || RAW.calculator.log)[1].content.split("\n");
-check(c1.text.indexOf(raw1.slice(0, 5).join("\n") + "\n31 lines (1 header + 30 rows)") === 0 && raw1[6].indexOf("31 ") === 0 && raw1[5] === "---", "case 1 shows exactly the 5 lines the tool returned, then 31 lines = 1 header + 30 rows");
+check(c1.text === raw1.slice(0, 5).join("\n") + "\n---\n31 moonbean_sales_aug2026.csv" && raw1[6].indexOf("31 ") === 0 && raw1[5] === "---", "case 1 shows exactly what the tool returned (only the folder path shortened to the file name)");
+// every real case starts with its real set-up (the files named in the recorded prompt), and Ploy attaches nothing
+Object.keys(L.CASES).forEach(function (k) { var sc = L.CASES[k].script, pr = RAW[k].prompt;
+  check(sc[0].note === L.SETUP[k] && (L.SETUP[k].match(/[\w.-]+\.(?:csv|pdf|docx)/g) || []).every(function (f) { return pr.indexOf(f) >= 0; }), "case " + k + ": starts with the set-up, and every file it names is in the recorded prompt");
+  check(sc.every(function (m) { return !m.files; }), "case " + k + ": Ploy attaches no file (the files are in the shared folder)");
+  sc.forEach(function (m) { if (m.from && m.from !== "human" && m.from !== "model" && !m.safer && m.raw) { var rs = RAW[k].steps[m.raw[0]]; check(!/\((a law firm|1 header)|titles and links only|\d of the \d+ shown/.test(m.text), "case " + k + ": no explanation inside a tool bubble"); } }); });
+check(L.CASES.websearch.script.filter(function (m) { return m.safer; }).length === 2 && L.CASES.websearch.script.filter(function (m) { return m.safer; })[1].text === T.calculator("8580 * 1.07").text, "case 3: the 'safer agent' Calculator step is marked and shows the Calculator's real result");
 
 var norm = function (x) { return String(x).toLowerCase().replace(/[^a-z0-9]+/g, " ").trim(); };
 var teachAsks = [], testAsks = [];
@@ -179,14 +195,14 @@ teachAsks.forEach(function (a) { check(testAsks.map(norm).indexOf(norm(a)) < 0, 
 var teachKeys = [].concat(PP.FILEQ.map(function (x) { return "piece:" + x.key; }), PP.WEBQ.map(function (x) { return "page:" + x.key; }), PP.PICKS.filter(function (p) { return p.page; }).map(function (p) { return "page:" + p.page; }),
   PP.CALCQ.map(function (x) { return "value:" + x.value; }), PP.PICKS.filter(function (p) { return p.tool === "files"; }).map(function (p) { return "piece:" + T.fileSearch(p.call.replace(/^search: /, ""), 1)[0].piece.id; }), PP.PICKS.filter(function (p) { return p.tool === "calc"; }).map(function (p) { return "value:" + T.calculator(p.call).value; }),
   ["piece:h3", "page:w6", "value:8580", "value:" + T.calculator("8580 * 1.07").value, "value:47508"], (L.EXAMPLE_KEYS || []),
-  PP.INJQ.map(function (x) { return "call:" + x.call; }), PP.MAKEQ.map(function (x) { return "content:" + x.content; }), PP.PICKS.filter(function (p) { return p.tool === "maker"; }).map(function (p) { return "content:" + p.item.toLowerCase().replace(/ /g, ""); }));
+  PP.INJQ.map(function (x) { return "call:" + x.call; }), PP.MAKEQ.map(function (x) { return "content:" + x.content; }), PP.PICKS.filter(function (p) { return p.tool === "maker"; }).map(function (p) { return "content:" + p.content; }));
 var testKeys = [].concat(I.FILEQ.map(function (x) { return "piece:" + x.key; }), I.WEBQ.map(function (x) { return "page:" + x.key; }), I.PICKS.filter(function (p) { return p.page; }).map(function (p) { return "page:" + p.page; }),
   I.CALCQ.map(function (x) { return "value:" + x.value; }), I.PICKS.filter(function (p) { return p.tool === "calc"; }).map(function (p) { return "value:" + T.calculator(p.call).value; }),
   I.PICKS.filter(function (p) { return p.tool === "files"; }).map(function (p) { return "piece:" + T.fileSearch(p.call.replace(/^search: /, ""), 1)[0].piece.id; }),
-  I.PICKS.filter(function (p) { return p.tool === "maker"; }).map(function (p) { return "value:" + p.sum; }),
+  I.PICKS.filter(function (p) { return p.tool === "maker" && p.sum != null; }).map(function (p) { return "value:" + p.sum; }),
   [].concat.apply([], I.MAKEQ.map(function (m) { var c = I.CONTENTS[m.content]; return c.rows ? [] : (c.paragraphs.join(" ").match(/\d[\d,.]*/g) || []).map(function (x) { return "value:" + Number(x.replace(/,/g, "")); }); })),
   ["piece:s1", "piece:s4", "page:w1", "value:" + R.numbers.total, "value:" + R.numbers.withVat, "value:" + R.numbers.extra],
-  I.INJQ.map(function (x) { return "call:" + x.call; }), I.MAKEQ.map(function (x) { return "content:" + x.content; }), I.PICKS.filter(function (p) { return p.tool === "maker"; }).map(function (p) { return "content:" + p.item.toLowerCase().replace(/ /g, ""); }));
+  I.INJQ.map(function (x) { return "call:" + x.call; }), I.MAKEQ.map(function (x) { return "content:" + x.content; }), I.PICKS.filter(function (p) { return p.tool === "maker"; }).map(function (p) { return "content:" + p.content; }));
 teachKeys.forEach(function (k) { check(testKeys.indexOf(k) < 0, "taught and tested with the same source or value: " + k); });
 L.DEMO_WORDS.forEach(function (w) { var hits = T.fileSearch(w, 3); check(hits.length > 0 && hits.every(function (x) { return testKeys.indexOf("piece:" + x.piece.id) < 0; }), "lesson 2 demo word “" + w + "” finds only pieces no test uses"); });
 // VAT (real case 3) is tested only in the Agent Arena: no stage question uses the VAT page or asks about VAT
