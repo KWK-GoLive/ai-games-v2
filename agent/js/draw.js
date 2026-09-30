@@ -49,7 +49,12 @@
     return function () { return V.fileActions({ name: f.name, spec: spec, note: note, download: function () { T.F.download(f.bytes, f.name, f.mime); } }); };
   }
   /* Ploy's request, with the café files she shares (📎) */
-  function ask(P, it) { P.add({ from: "human", to: "model", text: it.ask, files: it.files || null }); }
+  /* Ploy's message: the café's own files are already in the shared folder (shown once as a note), so she attaches only a NEW file */
+  function ask(P, it) {
+    if (P.folder) P.folder();
+    var fresh = (it.files || []).filter(function (f) { return root.AGENT_PHONES.FOLDER.indexOf(f) < 0; });
+    P.add({ from: "human", to: "model", text: it.ask, files: fresh.length ? fresh : null });
+  }
 
   /* ---------- Stage 1: which app? ---------- */
   function drawToolpick(it, box, api, P) {
@@ -59,7 +64,11 @@
     var made = it.madeFile ? T.makeFile(root.AGENT_ITEMS.spec(it.madeFile.type, it.madeFile.name, it.madeFile.content)) : null;
     var c1 = choices(it.tools, function (v) {
       ans.tool = v;
-      if (v !== it.tool) P.note(v === "none" ? "✗ You chose to answer without an app. Teacher's replay: here is what the right choice would give." : "✗ Not the best app here. Teacher's replay: this is what " + (it.tool === "none" ? "answering yourself" : "asking the right app") + " would give (real apps only run what the model asks for).");
+      if (v !== it.tool) {
+        var asked = v === "none" ? "✗ You chose to answer yourself." : "✗ You asked the " + root.AGENT_PHONES.APPS[v].name + ".";
+        P.note(it.tool === "none" ? asked + " The right move was to answer yourself: no app was needed here."
+          : asked + " Teacher's replay (not your move): this is what the right app would send back.");
+      }
       (it.calls || []).forEach(function (c, i) {
         P.add({ from: "model", to: it.tool, text: c[0] });
         P.add({ from: it.tool, to: "model", text: c[1], el: made && i === 0 ? function () { return h("span", { class: "b-body" }, h("span", { text: c[1] }), fileCard(made, "made by the File maker")()); } : null });
@@ -148,6 +157,7 @@
   /* ---------- Stage 4: calculator ---------- */
   function drawCalc(it, box, api, P) {
     var ans = { tokens: [] };
+    if (P.folder) P.folder();
     if (it.show === "rows") {
       var rows = T.totals().rows.filter(function (r) { return r.item === it.rowsItem; });
       P.note("Earlier in this chat you looked at the " + it.rowsItem + " rows of the sales file:\n" + rows.map(function (r) { return r.date + "  " + r.item + "  " + r.qty + " × " + r.price + " = " + r.total; }).join("\n"));
@@ -203,7 +213,7 @@
       P.add({ from: "model", to: "maker", text: "make file: " + f.name + " from " + src + "\ncontents: " + label });
       P.add({ from: "maker", to: "model", text: "", el: function () { return h("span", { class: "b-body" }, h("span", { text: "✅ " + f.name + " made" + (table ? ": " + n + " row" + (n === 1 ? "" : "s") + " (+ a header row)." : ".") }), fileCard(f, "made by the File maker")()); } });
       P.add({ from: "model", to: "maker", text: "open file: " + f.name + " (check it)" });
-      P.add({ from: "maker", to: "model", text: C.rows ? f.name + ": " + (table ? n + " rows under the header, starting “" + C.rows()[Math.min(1, n)].join(", ") + "”." : (n + 1) + " lines of text, starting “" + C.rows()[0].join(": ") + "”.") : f.name + " says: " + C.paragraphs.join(" ") });
+      P.add({ from: "maker", to: "model", text: C.rows ? f.name + ":\n" + root.AGENT_ITEMS.checkText(ans.content, ans.type) : f.name + " says: " + C.paragraphs.join(" ") });
       var replies = it.replies.map(function (x) { return { value: x.value, label: it.replyLabel(x.value, ans) }; });
       step2.appendChild(move(2, "You opened the file to check it (👁 View here in your phone too). Now reply to Ploy.", (c4 = choices(replies, function (v) {
         ans.reply = v; P.add({ from: "model", to: "human", text: replies.filter(function (x) { return x.value === v; })[0].label, attach: fileCard(f, "sent to Ploy") }); api.submit(ans);
@@ -240,6 +250,7 @@
 
   /* ---------- Stage 7: permissions ---------- */
   function drawPermission(it, box, api, P) {
+    if (P.folder) P.folder();
     P.note("Your plan (the model's next step): " + it.plan);
     var c = choices(it.acts, function (v) {
       P.add({ from: "model", to: "human", text: v === "do" ? "Doing it: " + it.plan : v === "ask" ? "May I? I'd like to: " + it.plan : "I won't do this: " + it.plan });

@@ -29,6 +29,9 @@
 
   /* the café's real files (in agent/files/): a 📎 chip on a message opens them */
   var REAL_FILES = ["moonbean_sales_aug2026.csv", "Moonbean_staff_handbook.pdf", "Moonbean_staff_handbook.docx", "Moonbean_menu_2026.docx", "Supplier_letter_Aug2026.pdf"];
+  /* the café's shared folder: the apps can open these files; Ploy doesn't attach them (29 Sep 2026) */
+  var FOLDER = ["Moonbean_staff_handbook.pdf", "Moonbean_staff_handbook.docx", "Moonbean_menu_2026.docx", "Supplier_letter_Aug2026.pdf", "moonbean_sales_aug2026.csv"];
+  var FOLDER_NOTE = "📁 Shared folder (the apps can open these; the model can't open files itself): " + FOLDER.join(", ");
   /* chips show the real file names (29 Sep 2026), exactly as the apps list them */
   var SEARCH_ALL = "the café's 3 documents";
   /* the file the app opens for a model request (the model can't send a file: it names it). Given as m.opens, or read from the request. */
@@ -139,6 +142,7 @@
 
     /* m: { from: "human"|"model"|<app>, to: "human"|"model"|<app>, text, kind: "text"|"call"|"result", el } */
     function add(m) {
+      var cls2 = "";
       var fromApp = APPS[m.from] ? m.from : null, toApp = APPS[m.to] ? m.to : null;
       [fromApp, toApp].forEach(function (a) { if (a && !appThreads[a]) { apps.push(a); addApp(a, appBar, ph.apps.body); } });  // an app not listed yet gets its own thread
       var known = (m.from === "human" && m.to === "model") || (m.from === "model" && (m.to === "human" || toApp)) || (fromApp && m.to === "model");
@@ -150,22 +154,28 @@
         put("model", bubble("right", m, "→ " + who.human.name.replace(/ \(.*\)/, ""), "c-model"));
         put("human", bubble("left", m, "🤖 Model", "c-model"));
       } else if (m.from === "model" && toApp) {
+        if (m.safer) cls2 = " b-safer";
         if (m.opens === undefined) { var op = opensOf(toApp, m.text); if (op) m = Object.assign({}, m, { opens: op }); }
-        put("model", bubble("right", Object.assign({ kind: "call" }, m), "→ " + APPS[toApp].icon + " " + APPS[toApp].name, "c-model"));
-        put("apps", bubble("left", Object.assign({ kind: "call" }, m), "🤖 Model", "c-model"), appThreads[toApp]);
+        var tag = m.safer ? " (safer agent, not in the recording)" : "";
+        put("model", bubble("right", Object.assign({ kind: "call" }, m), "→ " + APPS[toApp].icon + " " + APPS[toApp].name + tag, "c-model" + cls2));
+        put("apps", bubble("left", Object.assign({ kind: "call" }, m), "🤖 Model" + tag, "c-model" + cls2), appThreads[toApp]);
         showApp(toApp);
       } else if (fromApp) {
-        put("apps", bubble("right", Object.assign({ kind: "result" }, m), APPS[fromApp].name, "c-app"), appThreads[fromApp]);
-        put("model", bubble("left", Object.assign({ kind: "result" }, m), APPS[fromApp].icon + " " + APPS[fromApp].name, "c-app"));
+        var tag2 = m.safer ? " (safer agent, not in the recording)" : "", c3 = m.safer ? " b-safer" : "";
+        put("apps", bubble("right", Object.assign({ kind: "result" }, m), APPS[fromApp].name + tag2, "c-app" + c3), appThreads[fromApp]);
+        put("model", bubble("left", Object.assign({ kind: "result" }, m), APPS[fromApp].icon + " " + APPS[fromApp].name + tag2, "c-app" + c3));
         showApp(fromApp);
       }
     }
     /* a small grey note in the Model phone (e.g. what the harness adds before the chat) */
     function note(text, k) { put(k || "model", h("p", { class: "ph-note", text: text })); }
+    /* once per chat, before Ploy's first message: where the café's files are */
+    var folderShown = false;
+    function folder() { if (!folderShown) { folderShown = true; note(FOLDER_NOTE); } }
 
     /* the newest message the model received (for the "in your phone" reminder under the chat on small screens) */
     function lastIn() { var l = ph.model.body.querySelectorAll(".b.left"); return l.length ? l[l.length - 1] : null; }
-    return { el: wrap, add: add, apps: apps, lastIn: lastIn, note: note, show: show, showApp: showApp, phones: ph, threads: appThreads };
+    return { el: wrap, add: add, folder: folder, apps: apps, lastIn: lastIn, note: note, show: show, showApp: showApp, phones: ph, threads: appThreads };
   }
 
   /* Step through a script of messages with Next / Play all buttons. script: [{...message, say: "explanation"}] */
@@ -195,5 +205,5 @@
     return { phones: P, step: step, done: function () { return i >= script.length; } };
   }
 
-  root.AGENT_PHONES = { Phones: Phones, replay: replay, APPS: APPS, WHO: WHO };
+  root.AGENT_PHONES = { Phones: Phones, replay: replay, APPS: APPS, WHO: WHO, FOLDER: FOLDER, FOLDER_NOTE: FOLDER_NOTE };
 })(typeof window !== "undefined" ? window : globalThis);

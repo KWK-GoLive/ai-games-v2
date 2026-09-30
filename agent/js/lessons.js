@@ -10,15 +10,22 @@
   /* ---------- the four real cases, simplified into the 3 phones. "q" = text that must appear in the raw record. ---------- */
   var C = RAW ? RAW.cases : {};
   function stepOf(k, i) { return C[k].steps[i]; }
+  /* the set-up each real run was given (from the recorded prompts): which files were in the shared folder */
+  var SETUP = {
+    calculator: "Set-up (from the real run): Ploy's shared folder has moonbean_sales_aug2026.csv (sales from 1 to 10 August 2026, prices in Thai baht). Tools: a code tool, web search and opening web pages.",
+    filesearch: "Set-up (from the real run): Ploy's shared folder has the café's staff handbook (Moonbean_staff_handbook.pdf and Moonbean_staff_handbook.docx, the same text) and a sales file moonbean_sales_aug2026.csv. Tools: a code tool, web search and opening web pages.",
+    websearch: "Set-up (from the real run): Ploy's shared folder has a sales file moonbean_sales_aug2026.csv (sales from 1 to 10 August 2026, prices in Thai baht). Tools: a code tool, web search and opening web pages.",
+    notool: "Set-up (from the real run): Ploy's shared folder has a sales file moonbean_sales_aug2026.csv. Tools (only if needed): a code tool, web search and opening web pages."
+  };
   var CASES = {
     calculator: { title: "Case 1: “What were our total Latte sales?”", app: "code",
       script: [
-        { from: "human", to: "model", text: "What were our total Latte sales in baht?", files: ["moonbean_sales_aug2026.csv"], q: ["prompt", "What were our total Latte sales in baht?"], say: "Ploy asks. The sales file is in the shared folder, but the model can't open it itself: it can only write text." },
-        { note: "Before the chat, the apps gave the model its instructions and a list of tools. This real agent had one code tool that did the jobs of our Calculator and File search, plus web search.", say: "The apps add this at the top of the model's chat." },
+        { note: SETUP.calculator, say: "Before Ploy's message, the apps put the set-up at the top of the model's chat: which files are in the shared folder, and which tools it has. This real agent had one code tool that did the jobs of our Calculator and File search, plus web search." },
+        { from: "human", to: "model", text: "What were our total Latte sales in baht?", q: ["prompt", "What were our total Latte sales in baht?"], say: "Ploy asks. She attaches nothing: the sales file is already in the shared folder, but the model can't open it itself. It can only write text." },
         { from: "model", to: "code", text: "Show me the first 5 lines of the sales file, and count how many lines it has.", opens: ["moonbean_sales_aug2026.csv"], raw: [0], say: "The model writes a tool request and names the file. It can't send the file itself: the code tool opens it from the shared folder. (Exact command below.)" },
-        { from: "code", to: "model", text: "date,item,qty,price,total\n2026-08-01,Mocha,14,75,1050\n2026-08-01,Americano,4,55,220\n2026-08-01,Green tea,5,50,250\n2026-08-02,Croissant,13,45,585\n31 lines (1 header + 30 rows)", raw: [1],
+        { from: "code", to: "model", text: "date,item,qty,price,total\n2026-08-01,Mocha,14,75,1050\n2026-08-01,Americano,4,55,220\n2026-08-01,Green tea,5,50,250\n2026-08-02,Croissant,13,45,585\n---\n31 moonbean_sales_aug2026.csv", raw: [1],
           q: ["step", 1, "date,item,qty,price,total\n2026-08-01,Mocha,14,75,1050\n2026-08-01,Americano,4,55,220\n2026-08-01,Green tea,5,50,250\n2026-08-02,Croissant,13,45,585\n---\n31 "],
-          say: "The code tool runs it and pastes the result into the model's chat: the first 5 lines (the header + 4 rows), and a count of 31 lines = 1 header + 30 rows." },
+          say: "The code tool runs it and pastes the result into the model's chat: the first 5 lines (the header + 4 rows), then “31”: the file has 31 lines = 1 header + 30 rows. (The real output showed the full folder path; we show just the file name.)" },
         { from: "model", to: "code", text: "Show me the whole file.", opens: ["moonbean_sales_aug2026.csv"], raw: [2] },
         { from: "code", to: "model", text: "(all 30 rows of the file)", raw: [3] },
         { from: "model", to: "code", text: "Add up the ‘total’ of every Latte row.", opens: ["moonbean_sales_aug2026.csv"], raw: [4], say: "It uses the tool as a calculator: exact adding by code, not by guessing." },
@@ -28,22 +35,30 @@
       lesson: "The real agent used a code tool as its calculator. Its report also said “Cross-checked via qty×price too”, but no tool step in the log did that check (the model may have done it in its head): always check what the tools really did." },
     filesearch: { title: "Case 2: “What does our handbook say about a refund?”", app: "code",
       script: [
-        { from: "human", to: "model", text: "A customer wants her money back because she doesn't like her latte. What does our handbook say we should do?", files: ["Moonbean_staff_handbook.pdf"], q: ["prompt", "A customer wants her money back because she doesn't like her latte. What does our handbook say we should do?"] },
+        { note: SETUP.filesearch, say: "The set-up at the top of the model's chat: the shared folder holds the handbook (as PDF and as Word, the same text) and the sales file." },
+        { from: "human", to: "model", text: "A customer wants her money back because she doesn't like her latte. What does our handbook say we should do?", q: ["prompt", "A customer wants her money back because she doesn't like her latte. What does our handbook say we should do?"] },
         { from: "model", to: "code", text: "List the files, then turn the handbook PDF into text.", opens: ["Moonbean_staff_handbook.pdf"], raw: [0], say: "The handbook is in the shared folder. To read the PDF it asks the code tool to list the folder and turn the PDF into text (the job of our File search)." },
-        { from: "code", to: "model", text: "Moonbean_staff_handbook.docx, Moonbean_staff_handbook.pdf, moonbean_sales_aug2026.csv\n… 3. Drinks that customers don't like: If a customer is unhappy with a drink, remake it once for free. We do not give cash refunds for drinks. …", raw: [1], q: ["step", 1, "If a customer is unhappy with a drink, remake it once for free. We do not give cash refunds for"], say: "The shared folder holds 3 files (the handbook as Word and as PDF, and the sales file); the model chose the PDF. Its text lands in the model's chat: now the model can “see” it." },
+        { from: "code", to: "model", text: "Moonbean_staff_handbook.docx, Moonbean_staff_handbook.pdf, moonbean_sales_aug2026.csv\n… 3. Drinks that customers don't like: If a customer is unhappy with a drink, remake it once for free. We do not give cash refunds for drinks. …", raw: [1], q: ["step", 1, "If a customer is unhappy with a drink, remake it once for free. We do not give cash refunds for"], say: "The folder listing shows the 3 files from the set-up; the model chose the PDF copy of the handbook. Its text lands in the model's chat: now the model can “see” it." },
         { from: "model", to: "human", text: "Hi Ploy — per section 3 of the handbook: if a customer doesn't like her drink, remake it once for free. We don't give cash refunds for drinks. If she's still not happy after the remake, call the shift manager (that's you) to handle it from there.", q: ["step", 3, "if a customer doesn't like her drink, remake it once for free. We don't give cash refunds for drinks."], say: "It answered from the handbook and said which section (page 2 in our game's copy). It also noticed that the mug refund rule (section 4) doesn't apply." }
       ],
       lesson: "This handbook is tiny, so the agent read all of it. For big files a File search app returns only the pieces that match, because the model's chat (its window) can't hold everything. That's lesson 2." },
     websearch: { title: "Case 3: “What's the VAT rate? Add it to 8,580.”", app: "web",
       script: [
+        { note: SETUP.websearch, say: "The set-up: the sales file is in the shared folder; the tools are a code tool and web search." },
         { from: "human", to: "model", text: "What is the VAT rate in Thailand right now? Our Latte sales were 8,580 baht before VAT. How much is that with VAT added?", q: ["prompt", "What is the VAT rate in Thailand right now? Our Latte sales were 8,580 baht before VAT. How much is that with VAT added?"] },
         { from: "model", to: "web", text: "Thailand VAT rate 2026 current", raw: [2], q: ["step", 2, "Thailand VAT rate 2026 current"], say: "It writes a search query. That's all a web search is, from the model's side." },
-        { from: "web", to: "model", text: "9 results, titles and links only, for example:\n• Thailand Extends VAT Rate Reduction to 7% Through September 2026 (a law firm)\n• Thailand phased VAT hike to 10% by 2030 (vatcalc.com)\n• Thailand Confirms No VAT Increase, Maintains 7% Rate Until at Least 2026 (VATupdate)", raw: [5], q: ["step", 5, "Thailand Extends VAT Rate Reduction to 7% Through September 2026"], say: "Look closely: the tool sent back only titles and links. The model never opened a page." },
-        { from: "model", to: "human", text: "Thailand's VAT rate is currently 7% (the government has extended the reduced rate through at least September 2026, instead of the standard 10%). … VAT (7%): 600.60 THB. Total with VAT: 9,180.60 THB", q: ["step", 6, "Total with VAT: 9,180.60 THB"], say: "It did 8,580 × 0.07 in its head (no calculator call). 600.60 is right, but a calculator is safer." }
+        { from: "model", to: "code", text: "Show me the first 5 lines of the sales file.", opens: ["moonbean_sales_aug2026.csv"], raw: [3], say: "It also peeks at the sales file (the real agent said: “to confirm context”)." },
+        { from: "code", to: "model", text: "date,item,qty,price,total\n2026-08-01,Mocha,14,75,1050\n2026-08-01,Americano,4,55,220\n2026-08-01,Green tea,5,50,250\n2026-08-02,Croissant,13,45,585", raw: [4], q: ["step", 4, "date,item,qty,price,total\n2026-08-01,Mocha,14,75,1050\n2026-08-01,Americano,4,55,220\n2026-08-01,Green tea,5,50,250\n2026-08-02,Croissant,13,45,585"] },
+        { from: "web", to: "model", text: "Links:\n• Thailand Extends VAT Rate Reduction to 7% Through September 2026 | Publications | Knowledge | Nishimura & Asahi — https://www.nishimura.com/en/knowledge/publications/20251022-116401\n• Thailand phased VAT hike to 10% by 2030 - vatcalc.com — https://www.vatcalc.com/thailand/thailand-to-raise-vat-rate-to-10-sept-2023/\n• Thailand Confirms No VAT Increase, Maintains 7% Rate Until at Least 2026 – VATupdate — …", raw: [5], q: ["step", 5, "Thailand Extends VAT Rate Reduction to 7% Through September 2026"], say: "Look closely: the web search sent back only titles and links (9 of them; 3 shown here; the first is from a law firm). It could have opened a page, but it never did." },
+        { from: "model", to: "human", text: "Thailand's VAT rate is currently 7% (the government has extended the reduced rate through at least September 2026, instead of the standard 10%). … VAT (7%): 600.60 THB. Total with VAT: 9,180.60 THB", q: ["step", 6, "Total with VAT: 9,180.60 THB"], say: "It did 8,580 × 0.07 in its head (no calculator call). 600.60 is right, but a calculator is safer." },
+        { note: "Not in the recording. Before that reply, instead of working it out in its head, a safer agent would ask the Calculator:", say: "This extra step is NOT part of the real run: it shows what a safer agent would have done before replying." },
+        { from: "model", to: "calc", text: "8580 * 1.07", safer: true, say: "A safer agent writes the sum for the Calculator instead of working it out itself." },
+        { from: "calc", to: "model", text: "= 9,180.6", safer: true, say: "The Calculator's exact result: the same 9,180.60, but now from a tool, not from the model's head." }
       ],
       lesson: "7% is right: the official Revenue Department site says so. But the model only read titles, never a page. Check who wrote a page and when (lesson 3)." },
     notool: { title: "Case 4: “What does CSV stand for?”", app: null,
       script: [
+        { note: SETUP.notool, say: "The set-up: the sales file is in the shared folder. That's how the model knows its name in the reply." },
         { from: "human", to: "model", text: "Quick question: what does CSV stand for?", q: ["prompt", "Quick question: what does CSV stand for?"] },
         { from: "model", to: "human", text: "CSV stands for Comma-Separated Values — it's just a plain text file format where each line is a row and values are separated by commas, like a simple spreadsheet. That's the format your sales file (moonbean_sales_aug2026.csv) is in.", q: ["step", 2, "CSV stands for Comma-Separated Values"], say: "No tool at all: the model knew this from its training." }
       ],
@@ -54,7 +69,7 @@
   var EXAMPLES = ["What is 1,284 × 37?", "Find me an easy brownie recipe we could try."];
   var EXAMPLE_KEYS = ["value:47508", "page:w13", "call:open page: bakingfun.example/brownies"];
   var DEMO_WORDS = ["apron", "shoes", "wear", "hair", "mugs", "unused", "receipt", "pay"];   // lesson 2's try-it words: they find only practice pieces
-  var api = { CASES: CASES, EXAMPLES: EXAMPLES, EXAMPLE_KEYS: EXAMPLE_KEYS, DEMO_WORDS: DEMO_WORDS };
+  var api = { SETUP: SETUP, CASES: CASES, EXAMPLES: EXAMPLES, EXAMPLE_KEYS: EXAMPLE_KEYS, DEMO_WORDS: DEMO_WORDS };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   if (typeof window === "undefined") return;
 
@@ -99,7 +114,9 @@
     el.appendChild(lessonNote);
     var det = h("details", { class: "card soft" }, h("summary", { style: "cursor:pointer;font-weight:600", text: "Show the exact recorded steps" }));
     raw.steps.forEach(function (s, i) {
-      if (s.kind === "tool_use") det.appendChild(h("div", { class: "small" }, h("b", { text: (i + 1) + ". Tool request → " + s.name + ": " }), h("code", { class: "mono", text: JSON.stringify(s.input).slice(0, 600) })));
+      var gloss = s.name === "SubagentHandback" ? " (the recording program: the agent hands its answer back)" : s.name === "ToolSearch" ? " (the recording program: the agent loads its web-search tool)" : "";
+      if (s.kind === "tool_use") det.appendChild(h("div", { class: "small" }, h("b", { text: (i + 1) + ". Tool request → " + s.name + gloss + ": " }), h("code", { class: "mono", text: JSON.stringify(s.input).slice(0, 600) })));
+      else if (s.kind === "tool_result" && /Report delivered to your caller/.test(String(s.content))) det.appendChild(h("div", { class: "small" }, h("b", { text: (i + 1) + ". Result: " }), String(s.content) + " (the recording program confirms the hand-back)"));
       else if (s.kind === "tool_result") det.appendChild(h("div", { class: "small" }, h("b", { text: (i + 1) + ". Result: " }), h("pre", { class: "mono", style: "white-space:pre-wrap;max-height:10em;overflow:auto;margin:0", text: String(s.content == null ? "(nothing)" : s.content).slice(0, 1500) })));
       else det.appendChild(h("div", { class: "small" }, h("b", { text: (i + 1) + ". Model text: " }), s.text));
     });
@@ -115,7 +132,7 @@
     function run() {
       clear(holder);
       tries++;
-      var it = make(rngOf("practice-" + tries));
+      var it = make(rngOf("practice-" + tries + "-" + Math.random()));   // a random start; items.js deals the pool without repeats
       var box = h("div", { class: "stack" });
       holder.appendChild(box);
       var fb = h("div", { class: "stack", "aria-live": "polite" });
@@ -125,7 +142,7 @@
         Array.prototype.forEach.call(box.querySelectorAll(".move button, .move .tile"), function (b) { b.disabled = true; });
         if (ctl && ctl.reveal) try { ctl.reveal(a, g); } catch (e) { /* display only */ }
         clear(fb);
-        fb.appendChild(h("p", { class: "feedback " + (g.frac === 1 ? "good" : "bad"), text: g.frac === 1 ? "✓ Well done!" : "Partly right (" + Math.round(g.frac * 100) + "%). Read why, then try again (or go on)." }));
+        fb.appendChild(h("p", { class: "feedback " + (g.frac === 1 ? "good" : "bad"), text: g.frac === 1 ? "✓ Well done!" : g.frac > 0 ? "Partly right (" + Math.round(g.frac * 100) + "%). Read why, then try again (or go on)." : "Not right this time. Read why, then try again (or go on)." }));
         (Array.isArray(g.explain) ? g.explain : [g.explain]).forEach(function (t) { fb.appendChild(h("p", { class: "small", text: t })); });
         var again = h("button", { class: "btn", type: "button", text: "↻ Try another one" });
         again.addEventListener("click", run);

@@ -26,15 +26,41 @@
   function fileHits(q) { return T.fileSearch(q, 2).map(function (r) { return r.where + ", “" + r.piece.title + "”: " + r.piece.text; }).join("\n"); }
   /* "Instruct, then check" (29 Sep 2026): the model tells the File maker what to do (it never guesses a count), the app
    * reports what it found, and the model opens the file to check it before replying. */
-  function makerPick(id, item, name, ask) {
-    var rows = TOT.rows.filter(function (r) { return r.item === item; }), n = rows.length, sum = rows.reduce(function (a, r) { return a + r.total; }, 0);
-    var what = n + " " + item + " row" + (n === 1 ? "" : "s");
-    return { id: id, tool: "maker", files: [D.salesFile], item: item, name: name, rowCount: n, sum: sum, hint: "Ploy wants a real file she can open.", ask: ask,
-      call: "make file: " + name + ".xlsx from " + D.salesFile + ", only the rows where item = " + item,
-      replies: [["Done: " + name + ".xlsx has the " + what + " (" + fmt(sum) + " baht in total); I opened it to check. You can download it here.", true],
-        ["Done: " + name + ".xlsx has the " + what + ", and I have also emailed it to all the staff.", false],
-        ["Here are the " + item + " sales: " + fmt(sum) + " baht in total. (I didn't make a file.)", false]],
-      why: "A real file has to be made: the File maker does that. The model says what goes in it, lets the app count the rows, and checks the file before saying “done”." };
+  var day = TOT.byDay, days = Object.keys(day).sort();
+  var CONTENTS = {
+    byItem: { label: "Total sales for each item", rows: function () { return [["item", "total (baht)"]].concat(Object.keys(TOT.byItem).sort(function (a, b) { return TOT.byItem[b] - TOT.byItem[a]; }).map(function (k) { return [k, TOT.byItem[k]]; })); } },
+    byDay: { label: "Total sales for each day", rows: function () { return [["date", "total (baht)"]].concat(days.map(function (d) { return [d, day[d]]; })); } },
+    latte: { label: "Only the Latte rows", rows: function () { return rowsOf(function (r) { return r.item === "Latte"; }); } },
+    mocha: { label: "Only the Mocha rows", rows: function () { return rowsOf(function (r) { return r.item === "Mocha"; }); } },
+    americano: { label: "Only the Americano rows", rows: function () { return rowsOf(function (r) { return r.item === "Americano"; }); } },
+    croissant: { label: "Only the Croissant rows", rows: function () { return rowsOf(function (r) { return r.item === "Croissant"; }); } },
+    brownie: { label: "Only the Brownie rows", rows: function () { return rowsOf(function (r) { return r.item === "Brownie"; }); } },
+    greentea: { label: "Only the Green tea rows", rows: function () { return rowsOf(function (r) { return r.item === "Green tea"; }); } },
+    all: { label: "Every row of the sales file", rows: function () { return rowsOf(function () { return true; }); } },
+    memoLatte: { label: "A short memo: Latte was the best seller", paragraphs: ["Latte was our best seller from 1 to 10 August 2026, ahead of Mocha and Croissant (from the sales file)."] },
+    memoPrice: { label: "A short memo: the new bean price", source: "Supplier_letter_Aug2026.pdf", paragraphs: ["From 1 September 2026, Doi Hills House Blend beans cost 520 baht per kg (was 480)."] }
+  };
+  var ITEM_CONTENT = { Latte: "latte", Mocha: "mocha", Americano: "americano", "Green tea": "greentea", Brownie: "brownie", Croissant: "croissant" };
+  /* opts: { id, item (rows of one item) OR content (a CONTENTS key), name, type, ask, what (instruction text) } */
+  function makerPick(o) {
+    var type = o.type || "xlsx", file = o.name + "." + type;
+    var content = o.content || ITEM_CONTENT[o.item];
+    var rows = o.item ? TOT.rows.filter(function (r) { return r.item === o.item; }) : null;
+    var n = o.item ? rows.length : CONTENTS[content].rows().length - 1;
+    var what = o.item ? n + " " + o.item + " row" + (n === 1 ? "" : "s") : n + " " + o.unit;
+    return { id: o.id, tool: "maker", files: [D.salesFile], item: o.item || null, content: content, type: type, name: o.name, rowCount: n,
+      sum: rows ? rows.reduce(function (a, r) { return a + r.total; }, 0) : null, hint: "Ploy wants a real file she can open.", ask: o.ask,
+      call: "make file: " + file + " from " + D.salesFile + ", " + (o.item ? "only the rows where item = " + o.item : o.what),
+      replies: [["Done: " + file + " has the " + what + (n > 8 ? "; I opened it and checked the first rows. You can download it here." : "; I opened it and checked them. You can download it here."), true],
+        ["Done: " + file + " has the " + what + ", and I have also emailed it to all the staff.", false],
+        [o.item ? "Here are the " + o.item + " sales, row by row, in this chat. (I didn't make a file.)" : "Here are the " + o.unit + " in this chat. (I didn't make a file.)", false]],
+      why: "A real file has to be made: the File maker does that. The model says what goes in it, lets the app count the rows, and opens the file to check it before saying “done”." };
+  }
+  /* what the model sees when it opens a made file to check it: the file's own rows (the first ones, if it's long) */
+  function checkText(content, type) {
+    var r = CONTENTS[content].rows(), body = r.slice(1), show = body.length > 8 ? body.slice(0, 5) : body;
+    return (type === "docx" ? r.map(function (x) { return x.join(": "); }) : [r[0].join(",")].concat(show.map(function (x) { return x.join(","); }))).slice(0, type === "docx" ? 9 : show.length + 1).join("\n")
+      + (body.length > show.length ? "\n… (" + body.length + " rows under the header)" : "");
   }
   var PICKS = [
     { id: "mult", tool: "calc", files: null, hint: "Exact multiplication of big numbers: would you trust yourself to guess every digit?", ask: "What is 2,356 × 48?", call: "2356 * 48",
@@ -58,7 +84,9 @@
     { id: "oat", tool: "web", files: null, hint: "Another shop's current price list: it is on that shop's website.", ask: "How much does oat milk cost at Bangkok Coffee Traders?", call: "search the web: oat milk price", page: "w7",
       replies: [["95 baht per litre, with free delivery for 12 litres or more (bkkcoffeetraders.example, 15 Sep 2026).", true], ["42 baht per litre, with free delivery for 10 litres or more (bkkcoffeetraders.example, 15 Sep 2026).", false], ["95 baht per litre, with free delivery for any order (bkkcoffeetraders.example, 15 Sep 2026).", false]],
       why: "Another shop's price list is on the web, not in the café's files." },
-    makerPick("excel", "Brownie", "Brownie_sales", "Please make me an Excel file with the Brownie sales."),
+    makerPick({ id: "excel", item: "Brownie", name: "Brownie_sales", ask: "Please make me an Excel file with the Brownie sales." }),
+    makerPick({ id: "croissantcsv", item: "Croissant", name: "Croissant_rows", type: "csv", ask: "Could you make a CSV file with only the Croissant rows?" }),
+    makerPick({ id: "copyxlsx", content: "all", name: "Sales_1-10Aug_copy", unit: "rows", what: "every row, as it is", ask: "Could you turn the whole sales file into an Excel spreadsheet for me?" }),
     { id: "thanks", tool: "none", files: null, hint: "Writing a friendly message: does it need any app?", ask: "Write a short thank-you message to the team for a busy week.",
       replies: [["Thank you, team, for all your hard work this busy week! Great job.", true], ["I searched the web first: the team had a busy week. Thank you all!", false], ["Let me ask the Calculator how busy the week was, then I'll write it.", false]],
       why: "Writing a friendly message needs no app: the model writes it from what it learned in training." },
@@ -80,7 +108,7 @@
     { id: "p-cups", tool: "web", files: null, hint: "Another shop's current price list: it is on that shop's website.", ask: "How much are paper cups at Bangkok Coffee Traders?", call: "search the web: paper cups price", page: "w15",
       replies: [["2 baht each, sold in boxes of 500 (bkkcoffeetraders.example, 15 Sep 2026).", true], ["5 baht each, sold in boxes of 100 (bkkcoffeetraders.example, 15 Sep 2026).", false], ["2 baht each, sold one by one (bkkcoffeetraders.example, 15 Sep 2026).", false]],
       why: "Another shop's price list is on the web, not in the café's files." },
-    makerPick("p-tea", "Green tea", "Green_tea_sales", "Could you put the Green tea rows into an Excel file for me?"),
+    makerPick({ id: "p-tea", item: "Green tea", name: "Green_tea_sales", ask: "Could you put the Green tea rows into an Excel file for me?" }),
     { id: "p-sign", tool: "none", files: null, hint: "Writing a short message: does it need any app?", ask: "Write a short sign for the door: we'll be back in 5 minutes.",
       replies: [["Back in 5 minutes! Thank you for waiting.", true], ["I searched the web: most signs just say “Closed”. Closed.", false], ["I'll ask the File maker to design a sign file first.", false]],
       why: "Writing a short sign needs no app." }
@@ -89,7 +117,7 @@
     if (p.tool === "calc") return T.calculator(p.call).text;
     if (p.tool === "files") return fileHits(p.call.replace(/^search: /, ""));
     if (p.tool === "web") return webHits(p.call.replace(/^search the web: /, ""));
-    if (p.tool === "maker") return "✅ " + p.name + ".xlsx made: found " + p.rowCount + " " + p.item + " row" + (p.rowCount === 1 ? "" : "s") + " (+ a header row).";
+    if (p.tool === "maker") return "✅ " + p.name + "." + p.type + " made: " + p.rowCount + " row" + (p.rowCount === 1 ? "" : "s") + " (+ a header row).";
     return "";
   }
   /* the tool requests and results of a pick, in order (a web search is followed by opening the best page) */
@@ -97,7 +125,7 @@
     if (p.tool === "none") return [];
     var out = [[p.call, pickResult(p)]];
     if (p.page) { var w = T.page(p.page); out.push(["open page: " + w.url, w.title + " (" + w.site + ", " + w.who + ", " + w.date + "):\n" + w.text]); }
-    if (p.tool === "maker") out.push(["open file: " + p.name + ".xlsx (check it)", p.rowCount + " " + p.item + " rows under the header; the total column adds up to " + fmt(p.sum) + " baht."]);
+    if (p.tool === "maker") out.push(["open file: " + p.name + "." + p.type + " (check it)", checkText(p.content, p.type)]);
     return out;
   }
 
@@ -105,7 +133,7 @@
     var replies = shuffle(p.replies.map(function (r, i) { return { value: "r" + i, label: r[0], ok: r[1] }; }), rng);
     var key = { tool: p.tool, reply: replies.filter(function (r) { return r.ok; })[0].value };
     return { kind: "toolpick", id: p.id, limit: 50, ask: p.ask, files: p.files, tool: p.tool, call: p.call || null, result: pickResult(p), calls: pickCalls(p), tools: TOOLS, replies: replies, key: key,
-      madeFile: p.tool === "maker" ? { type: "xlsx", name: p.name, content: ITEM_CONTENT[p.item] } : null, opens: p.tool === "maker" ? [D.salesFile] : null,
+      madeFile: p.tool === "maker" ? { type: p.type, name: p.name, content: p.content } : null, opens: p.tool === "maker" ? [D.salesFile] : null,
       title: "Ploy asks you something. Which app do you use, and what do you reply?",
       hint: p.hint,
       grade: function (a) {
@@ -234,7 +262,6 @@
   function stage3(rng) { return shuffle(WEBQ, rng).map(function (w) { return websearchItem(w, rng); }); }
 
   /* ================= Stage 4: calculator ================= */
-  var day = TOT.byDay, days = Object.keys(day).sort();
   var best = days.slice().sort(function (a, b) { return day[b] - day[a]; })[0], worst = days.slice().sort(function (a, b) { return day[a] - day[b]; })[0];
   var CALCQ = [
     { id: "mocha", ask: "How much did Mocha bring in over the 10 days?", value: TOT.byItem.Mocha,
@@ -289,19 +316,6 @@
 
   /* ================= Stage 5: file maker ================= */
   function rowsOf(filter) { var t = TOT; return [t.cols].concat(t.rows.filter(filter).map(function (r) { return t.cols.map(function (c) { return r[c]; }); })); }
-  var CONTENTS = {
-    byItem: { label: "Total sales for each item", rows: function () { return [["item", "total (baht)"]].concat(Object.keys(TOT.byItem).sort(function (a, b) { return TOT.byItem[b] - TOT.byItem[a]; }).map(function (k) { return [k, TOT.byItem[k]]; })); } },
-    byDay: { label: "Total sales for each day", rows: function () { return [["date", "total (baht)"]].concat(days.map(function (d) { return [d, day[d]]; })); } },
-    latte: { label: "Only the Latte rows", rows: function () { return rowsOf(function (r) { return r.item === "Latte"; }); } },
-    mocha: { label: "Only the Mocha rows", rows: function () { return rowsOf(function (r) { return r.item === "Mocha"; }); } },
-    americano: { label: "Only the Americano rows", rows: function () { return rowsOf(function (r) { return r.item === "Americano"; }); } },
-    brownie: { label: "Only the Brownie rows", rows: function () { return rowsOf(function (r) { return r.item === "Brownie"; }); } },
-    greentea: { label: "Only the Green tea rows", rows: function () { return rowsOf(function (r) { return r.item === "Green tea"; }); } },
-    all: { label: "Every row of the sales file", rows: function () { return rowsOf(function () { return true; }); } },
-    memoLatte: { label: "A short memo: Latte was the best seller", paragraphs: ["Latte was our best seller from 1 to 10 August 2026, ahead of Mocha and Croissant (from the sales file)."] },
-    memoPrice: { label: "A short memo: the new bean price", source: "Supplier_letter_Aug2026.pdf", paragraphs: ["From 1 September 2026, Doi Hills House Blend beans cost 520 baht per kg (was 480)."] }
-  };
-  var ITEM_CONTENT = { Latte: "latte", Mocha: "mocha", Americano: "americano", "Green tea": "greentea", Brownie: "brownie" };
   var MAKEQ = [
     { id: "items", ask: "Make me an Excel file with the total sales of each item.", type: "xlsx", content: "byItem", name: "Sales_by_item_1-10Aug",
       names: ["Sales_by_item_1-10Aug", "file1", "Latte_memo"], contents: ["byItem", "all", "memoLatte"], hint: "Excel means .xlsx; one row for each item." },
@@ -434,17 +448,27 @@
     { id: "maker", make: stage5 }, { id: "inject", make: stage6 }, { id: "perm", make: stage7 }
   ];
   /* Lesson practice (29 Sep 2026): one item at a time from pools that no stage or the Agent Arena uses */
+  /* practice deals its pool like cards: no repeat until every question has been seen (a new shuffled deck after that) */
+  var BAGS = {};
+  var LAST = {};
+  function deal(key, pool, rng) {
+    if (!BAGS[key] || !BAGS[key].length) {   // a new deck; its first card is never the card just dealt
+      BAGS[key] = shuffle(pool, rng);
+      if (pool.length > 1 && BAGS[key][BAGS[key].length - 1] === LAST[key]) BAGS[key].unshift(BAGS[key].pop());
+    }
+    return (LAST[key] = BAGS[key].pop());
+  }
   var PRACTICE = [
-    function (rng) { return toolpickItem(pick(PRACTICE_PICKS, rng), rng); },
-    function (rng) { return filesearchItem(pick(PRACTICE_FILEQ, rng), rng); },
-    function (rng) { return websearchItem(pick(PRACTICE_WEBQ, rng), rng); },
-    function (rng) { return calcItem(pick(PRACTICE_CALCQ, rng), rng); },
-    function (rng) { return makerItem(pick(PRACTICE_MAKEQ, rng), rng); },
-    function (rng) { return injectItem(pick(PRACTICE_INJQ, rng), rng); },
-    function (rng) { return permItem(pick(PRACTICE_PERMQ, rng), rng); }
+    function (rng) { return toolpickItem(deal(0, PRACTICE_PICKS, rng), rng); },
+    function (rng) { return filesearchItem(deal(1, PRACTICE_FILEQ, rng), rng); },
+    function (rng) { return websearchItem(deal(2, PRACTICE_WEBQ, rng), rng); },
+    function (rng) { return calcItem(deal(3, PRACTICE_CALCQ, rng), rng); },
+    function (rng) { return makerItem(deal(4, PRACTICE_MAKEQ, rng), rng); },
+    function (rng) { return injectItem(deal(5, PRACTICE_INJQ, rng), rng); },
+    function (rng) { return permItem(deal(6, PRACTICE_PERMQ, rng), rng); }
   ];
   var PRACTICE_POOLS = { PICKS: PRACTICE_PICKS, FILEQ: PRACTICE_FILEQ, WEBQ: PRACTICE_WEBQ, CALCQ: PRACTICE_CALCQ, MAKEQ: PRACTICE_MAKEQ, INJQ: PRACTICE_INJQ, PERMQ: PRACTICE_PERMQ };
-  var api = { PRACTICE: PRACTICE, PRACTICE_POOLS: PRACTICE_POOLS, STAGES: STAGES, PICKS: PICKS, FILEQ: FILEQ, WEBQ: WEBQ, CALCQ: CALCQ, MAKEQ: MAKEQ, INJQ: INJQ, PERMQ: PERMQ, CONTENTS: CONTENTS,
+  var api = { resetPractice: function () { BAGS = {}; LAST = {}; }, checkText: checkText, pickCalls: pickCalls, PRACTICE: PRACTICE, PRACTICE_POOLS: PRACTICE_POOLS, STAGES: STAGES, PICKS: PICKS, FILEQ: FILEQ, WEBQ: WEBQ, CALCQ: CALCQ, MAKEQ: MAKEQ, INJQ: INJQ, PERMQ: PERMQ, CONTENTS: CONTENTS,
     toolpickItem: toolpickItem, filesearchItem: filesearchItem, websearchItem: websearchItem, calcItem: calcItem, makerItem: makerItem,
     injectItem: injectItem, permItem: permItem, evalChips: evalChips, spec: spec, TOOLS: TOOLS, TOT: TOT, T: T };
   root.AGENT_ITEMS = api;
