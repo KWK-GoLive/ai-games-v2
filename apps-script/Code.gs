@@ -16,9 +16,10 @@
 var SHEET = "arena";
 var HEADERS = ["time", "classCode", "game", "runId", "nickname", "team", "stage", "stageName",
   "items", "correct", "points", "seconds", "hints"];
-var GAMES = ["llm", "agent", "warmup", "llm2", "llmfinal", "agent2", "agentfinal"];
-// How many stages each game has (v1: llm, agent; v2: warmup, llm2, llmfinal, agent2, agentfinal).
-var STAGES_BY_GAME = { llm: 6, agent: 6, warmup: 1, llm2: 7, llmfinal: 1, agent2: 7, agentfinal: 1 };
+var GAMES = ["llm", "agent", "warmup", "llm2", "llmfinal", "agent2", "agentfinal", "llm21", "llmfinal21"];
+// How many stages each game has (v1: llm, agent; v2: warmup, llm2, llmfinal, agent2, agentfinal;
+// v2.1 preview: llm21 = Be the LLM Arena with toy model v2 (8 stages), llmfinal21 = its 14-question final).
+var STAGES_BY_GAME = { llm: 6, agent: 6, warmup: 1, llm2: 7, llmfinal: 1, agent2: 7, agentfinal: 1, llm21: 8, llmfinal21: 1 };
 var LIVE_TTL = 21600;   // seconds a live position is kept (6 h, CacheService's maximum)
 function stages_(game) { return STAGES_BY_GAME[game] || 6; }
 var MAX_ITEM_POINTS = 225;   // 100 + 50 speed, x1.5 streak: the most one item can give
