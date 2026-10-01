@@ -31,7 +31,7 @@
     L2: { guided: ["my"], practice: ["the"] },
     L4: { prefix: "we like green", nodata: "they like green" },
     L5: { compare: "the dog", backoff: "a cat", whole: ["the", "dog"] },
-    L6: { exact: "where is the shop", partial: "when does the bank open", onlyA: "who owns the bank" },
+    L6: { exact: "where is the shop", partial: "when does the bank open", other: "when is the shop open", onlyA: "who owns the bank" },
     L7: { three: "we saw a red", two: "i like a red", one: "a big red" }
   };
   // Real context windows, for the end of lesson 4. Checked against the sources on 28 Sep 2026.
@@ -529,18 +529,20 @@
   /* ======================= Lesson 7 (since 29 Sep 2026): Answering questions ======================= */
   function lesson6(box, done, ctx) {
     var L6 = TEXTS.L6, C = CASES.L6, LL = root.LLMA;
-    var ex = LL.chatAnswer(L6, C.exact), pa = LL.chatAnswer(L6, C.partial), oa = LL.chatAnswer(L6, C.onlyA);
+    var ex = LL.chatAnswer(L6, C.exact), pa = LL.chatAnswer(L6, C.partial), ot = LL.chatAnswer(L6, C.other), oa = LL.chatAnswer(L6, C.onlyA);
     var answers = L6.qa.map(function (p) { return p[1]; });
     function ansOpts(right) { var o = answers.filter(function (a) { return a !== right; }).slice(0, 2).concat([right]); return o.map(function (a) { return { value: a, label: tok(a).map(dw).join(" ") }; }); }
     function seenOf(r) { return r.trail[0].seen.filter(function (w) { return w !== M.START; }); }
+    // Quick way (move 3): grow the ending from "A:" to the left; stop at the first ending that never appears.
     function endings(words) {
       var full = [M.Q].concat(words, [M.A]);
       var used = seenOf(LL.chatAnswer(L6, words.join(" "))).length;
       var list = h("div", { class: "stack" });
-      for (var k = Math.min(full.length, 8); k >= used; k--) {
-        var e = full.slice(-k);
-        var ok = k === used;
-        list.appendChild(h("div", { class: "small" }, h("span", { "aria-hidden": "true", text: ok ? "\u2705 " : "\u274c " }), h("span", { class: ok ? "kh-in" : "", text: "\u201c" + e.map(dw).join(" ") + "\u201d" }), ok ? " appears in the chats: continue from here." : " never appears."));
+      for (var k = 1; k <= Math.min(full.length, 8); k++) {
+        var e = full.slice(-k), ok = k <= used, best = k === used;
+        list.appendChild(h("div", { class: "small" }, h("span", { "aria-hidden": "true", text: ok ? "\u2705 " : "\u274c " }), h("span", { class: best ? "kh-in" : "", text: "\u201c" + e.map(dw).join(" ") + "\u201d" }),
+          best ? " appears: the longest ending, so continue from here." : ok ? " appears: add one more word." : " never appears: stop."));
+        if (!ok) break;
       }
       return list;
     }
@@ -548,7 +550,16 @@
       { title: "A chatbot continues after \u201cA:\u201d", render: function (el) {
         el.appendChild(h("p", { text: "Chatbots are also trained on example chats: a question (Q:), then an answer (A:). So the model learns: after \u201cA:\u201d come answer words. When you ask something, it writes \u201cQ: your question A:\u201d and simply continues the text." }));
         el.appendChild(chatText(L6));
-        el.appendChild(h("p", { class: "small muted", text: "Same idea as lessons 5 and 6, with a longer keyhole: up to 8 words, so a whole short question fits. Too long to find? Back off to a shorter ending." }));
+        el.appendChild(h("p", { class: "small muted", text: "Same idea as lessons 5 and 6, with a longer keyhole: up to 8 words, so a whole short question fits. It uses the longest ending of your question that it can find in the chats (the next step shows a quick way to find it)." }));
+      } },
+      { title: "How to work it out", render: function (el) {
+        el.appendChild(h("p", { text: "Use these moves for every question in this lesson and in stage 7:" }));
+        el.appendChild(V.rules([
+          "Write the question as \u201cQ: \u2026 A:\u201d.",
+          "Seen this exact question in the chats? Copy its answer. Done.",
+          "Not seen? Quick way: start from \u201cA:\u201d and add words to the left, one at a time. Stop when the ending never appears in the chats. The last ending that appeared is the longest one: the model continues from there.",
+          "Continue word by word: take the word that comes next most often. A tie? The chat higher up the list wins. Stop at the end of the answer."]));
+        el.appendChild(h("p", {}, "Then judge the answer: ", h("b", { text: "Supported" }), " if a chat asks the same question (even in other words) and gives that answer; ", h("b", { text: "Made up" }), " if the answer was borrowed from a different question."));
       } },
       { title: "A question it has seen", locked: true, render: function (el, unlock) {
         el.appendChild(chatText(L6));
@@ -556,9 +567,9 @@
           right: "It has seen this exact question, so it copies the answer that came after it. That answer is supported by the chats.",
           wrong: "Find the same question in the chats." }], unlock);
       } },
-      { title: "A new question: shrink the keyhole", locked: true, render: function (el, unlock) {
+      { title: "A new question: grow from \u201cA:\u201d", locked: true, render: function (el, unlock) {
         el.appendChild(chatText(L6));
-        el.appendChild(h("p", {}, "Someone asks ", h("b", { text: "\u201c" + C.partial + "?\u201d" }), ". That exact question is not in the chats, so the model tries shorter and shorter endings:"));
+        el.appendChild(h("p", {}, "Someone asks ", h("b", { text: "\u201c" + C.partial + "?\u201d" }), " That exact question is not in the chats, so use move 3: start from \u201cA:\u201d and add words to the left:"));
         el.appendChild(endings(tok(C.partial)));
         chain(el, [
           { q: "What does the model answer?", key: pa.answer, options: ansOpts(pa.answer),
@@ -568,9 +579,22 @@
             right: "Made up. No chat says when the bank opens. The model still answers, and sounds just as sure. This is a hallucination.", wrong: "Is there any chat about the bank's opening time?" }
         ], unlock);
       } },
+      { title: "Same question, other words", locked: true, render: function (el, unlock) {
+        el.appendChild(chatText(L6));
+        el.appendChild(h("p", {}, "Someone asks ", h("b", { text: "\u201c" + C.other + "?\u201d" }), " Not in the chats word for word, so use move 3:"));
+        el.appendChild(h("p", { class: "small muted", text: "Chat 5 has \u201cis the shop open\u201d, but then \u201ctoday\u201d, not \u201cA:\u201d. An ending only counts if it ends with \u201cA:\u201d." }));
+        el.appendChild(endings(tok(C.other)));
+        chain(el, [
+          { q: "What does the model answer?", key: ot.answer, options: ansOpts(ot.answer),
+            right: "From \u201c" + seenOf(ot).map(dw).join(" ") + "\u201d it continues like chat 1: \u201c" + ot.answer + "\u201d.", wrong: "Which chat has the ending \u201c" + seenOf(ot).map(dw).join(" ") + "\u201d? Copy what came after it." },
+          { q: "Is \u201c" + ot.answer + "\u201d backed by the chats?", key: "sup", oneCol: true,
+            options: [{ value: "sup", label: "Supported: chat 1 asks the same thing in other words" }, { value: "made", label: "Made up: the words are different, so it was borrowed" }],
+            right: "Supported. \u201c" + C.other + "?\u201d and \u201c" + ot.backing[0] + "?\u201d mean the same, and chat 1 gives this answer. Judge by meaning, not by exact words.", wrong: "Does any chat ask the same thing, maybe in other words? What does it answer?" }
+        ], unlock);
+      } },
       { title: "Only \u201cA:\u201d matches", locked: true, render: function (el, unlock) {
         var first = oa.trail[0];
-        el.appendChild(h("p", {}, "Now someone asks ", h("b", { text: "\u201c" + C.onlyA + "?\u201d" }), ". The model shortens the keyhole again and again. Nothing matches until only \u201cA:\u201d is left:"));
+        el.appendChild(h("p", {}, "Now someone asks ", h("b", { text: "\u201c" + C.onlyA + "?\u201d" }), " Move 3 stops at once: only \u201cA:\u201d itself appears."));
         el.appendChild(endings(tok(C.onlyA)));
         el.appendChild(chatText(L6, true));
         el.appendChild(ctable(first.raw, { title: "Words right after \u201cA:\u201d in all the chats:" }));
@@ -583,7 +607,7 @@
       { title: "Toy model vs real chatbot", render: function (el) {
         el.appendChild(V.cards([
           { icon: "\ud83e\uddf8", title: "Our toy model", text: "Looks for the exact words in its training text, and backs off (shorter keyhole) when it can't find them." },
-          { icon: "\ud83e\udd16", title: "A real LLM", text: "Doesn't search its training text, doesn't back off, and doesn't read from the end: it looks at all the words in its window at once. It learned patterns from a huge amount of text, so it can answer new questions well." },
+          { icon: "\ud83e\udd16", title: "A real LLM", text: "Doesn't search its training text, doesn't back off, and doesn't read from the end: it looks at all the words in its window at once. It doesn't look for the longest matching ending; it weighs what all the words mean together. It learned patterns from a huge amount of text, so it can answer new questions well." },
           { icon: "\u26a0\ufe0f", title: "Same weakness", text: "When a real LLM doesn't know, it still writes something that looks like an answer, and sounds just as sure. Always check important facts." },
           { icon: "\ud83d\udcac", title: "Stage 7", text: "Predict the answer, then judge: supported by the chats, or made up?" }], { cols: 2 }));
       } }
