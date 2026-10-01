@@ -50,7 +50,7 @@
         lesson: "The longest keyhole that has data decides. Next: the same idea with a much longer keyhole, for answering questions." },
       { id: "chat", part: "B", icon: "\ud83d\udcac", name: "Chat brain", lessonTitle: "Answering questions (and making things up)", teach: T.chat, make: S("chat"),
         goal: "A chatbot answers by continuing \u201cQ: \u2026 A:\u201d. Predict its answer, then judge whether the answer is backed by the example chats.",
-        rules: ["Seen this question? It copies that answer.", "New question? It finds the longest ending (up to 8 words, like \u201cthe pool open A:\u201d) that appears in the chats and continues from there, word by word. At worst only \u201cA:\u201d is left. Tie? The chat higher up the list wins.", "Supported = a chat asks the same question (same meaning, even in other words) and gives that answer. Made up = the answer was borrowed from another question. Half marks for each part."],
+        rules: ["Seen this question? It copies that answer.", "New question? Quick way: start from \u201cA:\u201d and add words to the left one by one. The longest ending (up to 8 words, like \u201cthe pool open A:\u201d) that appears in the chats is where it continues, word by word. At worst only \u201cA:\u201d is left. Tie? The chat higher up the list wins.", "Supported = a chat asks the same question (same meaning, even in other words) and gives that answer. Made up = the answer was borrowed from another question. Half marks for each part."],
         lesson: "This is where made-up answers (hallucinations) come from: the model always continues the text with something that looks like an answer, and it sounds just as sure either way." }
     ],
     finalCard: function () {

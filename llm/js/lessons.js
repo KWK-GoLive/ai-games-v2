@@ -583,7 +583,7 @@
       { title: "Toy model vs real chatbot", render: function (el) {
         el.appendChild(V.cards([
           { icon: "\ud83e\uddf8", title: "Our toy model", text: "Looks for the exact words in its training text, and backs off (shorter keyhole) when it can't find them." },
-          { icon: "\ud83e\udd16", title: "A real LLM", text: "Doesn't search its training text and doesn't back off. It learned patterns from a huge amount of text, so it can answer new questions well." },
+          { icon: "\ud83e\udd16", title: "A real LLM", text: "Doesn't search its training text, doesn't back off, and doesn't read from the end: it looks at all the words in its window at once. It learned patterns from a huge amount of text, so it can answer new questions well." },
           { icon: "\u26a0\ufe0f", title: "Same weakness", text: "When a real LLM doesn't know, it still writes something that looks like an answer, and sounds just as sure. Always check important facts." },
           { icon: "\ud83d\udcac", title: "Stage 7", text: "Predict the answer, then judge: supported by the chats, or made up?" }], { cols: 2 }));
       } }

@@ -418,7 +418,7 @@
       var first = x.r.trail[0];
       return { kind: "chat", chat: chat, question: x.q, limit: 60, key: key,
         title: "Someone asks: \u201c" + ds(x.q).charAt(0).toUpperCase() + ds(x.q).slice(1) + "?\u201d",
-        hint: "Find the longest ending of \u201cQ: " + ds(x.q) + " A:\u201d that appears in the example chats, then continue from there, word by word.",
+        hint: "Quick way: start from \u201cA:\u201d and add words to the left one by one (\u201cQ: " + ds(x.q) + " A:\u201d). Stop at the longest ending that appears in the example chats, then continue from there, word by word.",
         options: opts.map(function (a) { return { value: a, label: a === "I don't know" ? a : ds(a) }; }),
         grade: function (a) {
           a = a || {};
