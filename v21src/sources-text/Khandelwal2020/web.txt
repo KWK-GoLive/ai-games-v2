@@ -1,0 +1,2 @@
+https://ar5iv.labs.arxiv.org/html/1911.00172 (arXiv:1911.00172, ICLR 2020; HTML render; accessed 2026-10-01 in Chrome; math italic k written as k)
+[Abstract] We introduce kNN-LMs, which extend a pre-trained neural language model (LM) by linearly interpolating it with a k-nearest neighbors (kNN) model. The nearest neighbors are computed according to distance in the pre-trained LM embedding space, and can be drawn from any text collection, including the original LM training data.
