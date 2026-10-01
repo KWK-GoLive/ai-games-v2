@@ -85,6 +85,10 @@ const qsOf = arr => arr.flatMap(s => s.qa.map(p => p[0]).concat(s.ask || []));
 const lessonQ = D.lesson.chats.qa.map(p => p[0]).concat([D.lesson.meaning, D.lesson.most, D.lesson.share]);
 const stageQ = qsOf(D.sets), finalQ = qsOf(D.final.sets);
 check(!lessonQ.some(q => stageQ.includes(q) || finalQ.includes(q)) && !stageQ.some(q => finalQ.includes(q)), "no question shared between lesson 8, stage 8 and the final");
+const v1Q = global.LLMA_DATA.chats.flatMap(c => c.qa.map(p => p[0]).concat(c.ask));
+check(!stageQ.concat(finalQ, lessonQ.filter(q => !["when does the shop open", "when does the shop close", "where is the shop"].includes(q))).some(q => v1Q.includes(q)),
+  "no lesson 8 / stage 8 / final question repeats a stage 7 (toy v1) chat or question (lesson 8 reuses 3 corner-shop questions from lesson 7 on purpose)");
+check(!global.LLMA_DATA.chats.some(c => [D.lesson.chats.name].concat(D.sets.map(s => s.name), D.final.sets.map(s => s.name)).some(n => n.split(" ")[0] === c.name.split(" ")[0])), "set names don't echo stage 7 set names (Sunny / Hilltop)");
 const sets3 = [D.lesson.chats.name].concat(D.sets.map(s => s.name), D.final.sets.map(s => s.name));
 check(set(sets3).length === sets3.length, "every chat set has its own name");
 const lp = [D.lesson.copy.prompt], sp = D.copy.map(c => c.prompt), fp = D.final.copy.map(c => c.prompt);
@@ -94,7 +98,7 @@ check(set(la.concat(sa, fa)).length === la.length + sa.length + fa.length, "add-
 check(D.addon.filter(x => x.needs).length >= 3 && D.addon.filter(x => !x.needs).length >= 3, "stage add-on pool has both kinds");
 
 /* ---------- 5. 300 runs of stage 8 and of the final ---------- */
-const OPTS_S = [], OPTS_F = [];
+const OPTS_S = [], OPTS_F = [], MOST_S = [], MOST_F = [];
 function checkItem(it, where) {
   const vals = it.options.map(o => String(o.value));
   check(set(vals).length === vals.length && vals.includes(String(it.key)), `${where} ${it.kind}: distinct options with the key`);
@@ -103,26 +107,40 @@ function checkItem(it, where) {
     const r = indep(it.chat.qa, it.question); check(String(r.best) === String(it.key), `${where} most-say key "${it.question}"`);
     const runner = r.scores.map((x, i) => [x, i]).filter(x => x[1] !== r.best).sort((a, b) => b[0] - a[0] || a[1] - b[1])[0][1];
     check(vals.includes(String(runner)), `${where} most-say: the runner-up chat is an option`);
+    const qw = set(words(it.question)), opts = vals.map(Number);
+    const shared = opts.map(i => set(words(it.chat.qa[i][0])).filter(w => qw.includes(w)).length);
+    const allShared = it.chat.qa.map(qa => set(words(qa[0])).filter(w => qw.includes(w)).length);
+    (where.startsWith('final') ? MOST_F : MOST_S).push({ k: Number(it.key), naive: opts[shared.indexOf(Math.max(...shared))],
+      first: opts.find(i => words(it.chat.qa[i][0])[0] === words(it.question)[0]), rare: allShared[r.best] < Math.max(...allShared),
+      highest: Math.max(...opts), lowest: Math.min(...opts),
+      odd: (() => { const fw = opts.map(i => words(it.chat.qa[i][0])[0]); const lone = opts.filter((i, j) => fw.filter(x => x === fw[j]).length === 1); return lone.length === 1 ? lone[0] : -1; })() });
+    if (it.kind === "t2most") check(true, "");
   }
   if (it.kind === "t2share") {
     const r = indep(it.chat.qa, it.question);
     check(String(Math.round(r.pct(it.answer))) === String(it.key), `${where} share key "${it.question}" / "${it.answer}"`);
     const ps = vals.map(Number); for (let i = 0; i < ps.length; i++) for (let j = i + 1; j < ps.length; j++) check(Math.abs(ps[i] - ps[j]) >= 5, `${where} share options at least 5 apart (${ps})`);
-    const k = Number(it.key); check(ps.length === 4, `${where} share: 4 options`); (where.startsWith('final') ? OPTS_F : OPTS_S).push({ ps, k });
+    const k = Number(it.key); check(ps.length === 4, `${where} share: 4 options`);
+    check(Object.keys(indep(it.chat.qa, it.question).byAns).length < 2 || ps.every(x => x <= 94), `${where} share: no 95-100% option when 2+ answers have points (${ps})`); (where.startsWith('final') ? OPTS_F : OPTS_S).push({ ps, k, sc: indep(it.chat.qa, it.question).byAns[it.answer] });
   }
-  if (it.kind === "t2copy") check(copyIndep(it.prompt).word === it.key, `${where} copy key`);
+  if (it.kind === "t2copy") {
+    check(copyIndep(it.prompt).word === it.key, `${where} copy key`);
+    const pw = words(it.prompt), labels = it.options.map(o => o.label), cap = labels.filter(l => l[0] !== l[0].toLowerCase());
+    check(!(cap.length === 1 && cap[0] === labels[vals.indexOf(String(it.key))]), `${where} copy: the key is not the only capitalised option (${labels})`);
+    check(vals.filter(v => v !== it.key && pw.includes(v)).length >= 2, `${where} copy: at least 2 wrong options are words from the prompt (${vals})`);
+  }
   if (it.kind === "t2addon") { const x = D.addon.concat(D.final.addon).filter(y => y.text === it.request)[0]; check(x && (x.needs ? "tool" : "plain") === it.key, `${where} add-on key`); }
 }
-for (let s = 1; s <= 1500; s++) {
+for (let s = 1; s <= (Number(process.env.SEEDS) || 1500); s++) {
   const its = G.stage8(M.makeRng(s));
   check(its.map(i => i.kind).join() === "t2most,t2share,t2copy,t2addon", `seed ${s}: stage 8 has the 4 kinds in order`);
-  its.forEach(it => { checkItem(it, `stage 8 seed ${s}`); check(D.sets.includes(it.chat) || !it.chat, `seed ${s}: stage 8 uses stage data only`); });
+  its.forEach(it => { checkItem(it, `stage 8 seed ${s}`); check(!it.chat || D.sets.some(x => x.id === it.chat.id), `seed ${s}: stage 8 uses stage data only`); });
   const f = L.FINAL(global.LLMA_DATA, M.makeRng(s));
   check(f.length === 14, `seed ${s}: the final has 14 questions`);
   check(["t2most", "t2share"].includes(f[12].kind) && ["t2copy", "t2addon"].includes(f[13].kind) && f[12].skill === "Meaning brain" && f[13].skill === "Meaning brain", `seed ${s}: final 13-14 are toy-v2 items`);
   f.slice(12).forEach(it => {
     checkItem(it, `final seed ${s}`);
-    if (it.chat) check(D.final.sets.includes(it.chat), `final seed ${s}: uses final data only`);
+    if (it.chat) check(D.final.sets.some(x => x.id === it.chat.id), `final seed ${s}: uses final data only`);
     if (it.prompt) check(D.final.copy.some(c => c.prompt === it.prompt), `final seed ${s}: final copy prompt`);
     if (it.request) check(D.final.addon.some(c => c.text === it.request), `final seed ${s}: final add-on request`);
   });
@@ -134,13 +152,28 @@ const STRATS = {
   "second smallest": ps => ps.slice().sort((a, b) => a - b)[1], "second largest": ps => ps.slice().sort((a, b) => a - b)[2],
   "closest to 50": ps => ps.slice().sort((a, b) => Math.abs(a - 50) - Math.abs(b - 50))[0],
   "closest to the mean": ps => { const m = ps.reduce((a, b) => a + b, 0) / ps.length; return ps.slice().sort((a, b) => Math.abs(a - m) - Math.abs(b - m))[0]; },
-  "middle without 100": ps => { const q = ps.filter(x => x !== 100).sort((a, b) => a - b); return q[Math.floor((q.length - 1) / 2)]; }
+  "middle without 100": ps => { const q = ps.filter(x => x !== 100).sort((a, b) => a - b); return q[Math.floor((q.length - 1) / 2)]; },
+  "not a multiple of 5": ps => ps.find(x => x % 5 !== 0) || ps[0]
 };
+const near = (ps, t) => ps.slice().sort((a, b) => Math.abs(a - t) - Math.abs(b - t))[0];
+[20, 25, 30, 33, 40, 50, 60, 66, 70, 75].forEach(A => { STRATS["closest to " + A] = ps => near(ps, A); });
+STRATS["the only multiple of 5 (else the first)"] = ps => { const m5 = ps.filter(x => x % 5 === 0); return m5.length === 1 ? m5[0] : ps[0]; };
 [["stage 8", OPTS_S], ["final", OPTS_F]].forEach(([nm, list]) => {
   Object.entries(STRATS).forEach(([sn, f]) => {
     const hit = list.filter(o => f(o.ps) === o.k).length / list.length;
     check(list.length > 50 && hit <= 0.4, `${nm} share items: guessing rule "${sn}" is right ${(100 * hit).toFixed(1)}% of the time (must be <= 40%, n=${list.length})`);
   });
+  [2, 3].forEach(x => { const hit = list.filter(o => near(o.ps, x * o.sc) === o.k).length / list.length;
+    check(hit <= 0.4, `${nm} share items: "closest to the points x ${x}" is right ${(100 * hit).toFixed(1)}% (must be <= 40%)`); });
+});
+/* most-say: the naive rules must fail often, and most items must be "a rare word beats more matching words" */
+[["stage 8", MOST_S], ["final", MOST_F]].forEach(([nm, list]) => {
+  const pct = f => list.filter(f).length / list.length;
+  check(list.length > 50 && pct(m => m.naive === m.k) <= 0.4, `${nm} most-say: "the chat sharing the most words" is right ${(100 * pct(m => m.naive === m.k)).toFixed(1)}% (must be <= 40%)`);
+  check(pct(m => m.first === m.k) <= 0.4, `${nm} most-say: "same first word" is right ${(100 * pct(m => m.first === m.k)).toFixed(1)}% (must be <= 40%)`);
+  [["highest-numbered chat", m => m.highest], ["lowest-numbered chat", m => m.lowest], ["the one option whose question starts differently", m => m.odd]].forEach(([rn, f]) => {
+    check(pct(m => f(m) === m.k) <= 0.4, `${nm} most-say: "${rn}" is right ${(100 * pct(m => f(m) === m.k)).toFixed(1)}% (must be <= 40%)`); });
+  check(pct(m => m.rare) >= 0.55, `${nm} most-say: ${(100 * pct(m => m.rare)).toFixed(1)}% are "a rare word beats more matching words" (must be >= 55%)`);
 });
 /* ---------- 6. v2.1 game definition ---------- */
 check(L.STAGES.length === 8 && L.STAGES[7].id === "meaning", "v2.1 items: 8 stages, the 8th is 'meaning'");
