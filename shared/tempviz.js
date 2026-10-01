@@ -69,7 +69,14 @@
     paint(shares);
     function point(spot, animate, done) {
       ptr.classList.remove("hidden");
-      if (!animate || reduced) { ptr.style.transition = "none"; ptr.style.left = spot + "%"; if (done) done(); return; }
+      if (!animate) { ptr.style.transition = "none"; ptr.style.left = spot + "%"; if (done) done(); return; }
+      if (reduced) {   // "reduce motion" is on: the spin is part of the lesson, so one short, slow glide (no fast sweep)
+        ptr.style.setProperty("transition", "none", "important"); ptr.style.left = "0%";
+        void ptr.offsetWidth;
+        ptr.style.setProperty("transition", "left 1.2s ease-out", "important"); ptr.style.left = spot + "%";
+        setTimeout(function () { if (done) done(); }, 1250);
+        return;
+      }
       // a quick sweep across the bar, then it settles on the spot
       ptr.style.transition = "none"; ptr.style.left = "0%";
       void ptr.offsetWidth;

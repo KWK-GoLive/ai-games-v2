@@ -156,7 +156,23 @@
     }, 0);
   }
 
+  /* ---------- teacher mode (1 Oct 2026): a code unlocks it on this device; it never sends anything ----------
+   * Only the SHA-256 of the code is in the page. This keeps the code out of sight, but it is not real security:
+   * teacher mode can't score anything, so the worst case is a student seeing answers early. */
+  var TEACHER_HASH = "987b9709244e9cb20fd785ed7f4852679858b9b8a5310b8b1be47b3c410227e1";
+  var TKEY = "aig-teacher";
+  function teacherOn() { try { return localStorage.getItem(TKEY) === "1"; } catch (e) { return false; } }
+  function setTeacher(on) { try { if (on) localStorage.setItem(TKEY, "1"); else localStorage.removeItem(TKEY); } catch (e) { /* storage blocked */ } }
+  function sha256hex(text) {
+    if (!(window.crypto && window.crypto.subtle && window.TextEncoder)) return Promise.reject(new Error("This browser can't check the code here."));
+    return window.crypto.subtle.digest("SHA-256", new TextEncoder().encode(text)).then(function (b) {
+      return Array.prototype.map.call(new Uint8Array(b), function (x) { return ("0" + x.toString(16)).slice(-2); }).join("");
+    });
+  }
+  function checkTeacherCode(code) { return sha256hex(String(code || "").trim().toUpperCase()).then(function (hx) { return hx === TEACHER_HASH; }); }
+
   var ARENA = window.ARENA = {
+    teacherOn: teacherOn, checkTeacherCode: checkTeacherCode,
     reveal: reveal, showFirst: showFirst,
     getProfile: getProfile, setProfile: setProfile,
     h: h, clear: clear, makeRng: makeRng, shuffle: shuffle, pick: pick, score: score,
@@ -235,17 +251,72 @@
     function itemsFor(run, si) {
       return stages[si].make(makeRng(run.seed + ":" + stages[si].id), { game: def.game });
     }
-    function sendsToBoard(run) { return run.mode === "official" && !!URL_ && !!run.player.classCode; }
+    function sendsToBoard(run) { return run.mode === "official" && !!URL_ && !!run.player.classCode; }   // (teacher runs: never)
+    function modeTag(run) { return run.mode === "practice" ? " \u00b7 practice run" : run.mode === "teacher" ? " \u00b7 🎓 teacher mode (nothing is scored)" : ""; }
     function resumeNote(run) {
       if (!sendsToBoard(run) || !/^[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(run.runId)) return null;
       return h("p", { class: "small muted" }, "Switching computers? Your resume code is ", h("b", { class: "mono", text: run.runId }),
         ". On the other computer, open this arena, choose \u201cContinue on another computer\u201d and type your nickname, class code and this code. You carry on from the next stage.");
     }
 
+    /* ---------- teacher mode: the button in the top bar, the code dialog, the stage menu ---------- */
+    var tBtn = h("button", { class: "pill teacher-btn", type: "button", "aria-haspopup": "dialog" });
+    function paintTeacher() { clear(tBtn); tBtn.appendChild(document.createTextNode("🎓")); tBtn.appendChild(h("span", { class: "hide-sm", text: " Teacher" })); if (teacherOn()) tBtn.appendChild(document.createTextNode(" ✓")); tBtn.setAttribute("aria-label", teacherOn() ? "Teacher mode (on)" : "Teacher mode"); tBtn.title = teacherOn() ? "Teacher mode is on (open any lesson or stage)" : "Teacher mode: type the teacher code"; }
+    (function () { var tb = document.querySelector(".topbar"); if (tb) tb.insertBefore(tBtn, tb.lastElementChild); paintTeacher(); })();
+    tBtn.addEventListener("click", function () { if (teacherOn()) renderHome(); else openTeacherDialog(); });
+    function openTeacherDialog() {
+      var old = document.getElementById("teacherDialog"); if (old) old.remove();
+      var inp = h("input", { class: "text-input", id: "teacherCode", type: "password", autocomplete: "off", spellcheck: "false", maxlength: "40", "aria-label": "Teacher code" });
+      var msg = h("p", { class: "feedback", "aria-live": "polite" });
+      var ok = h("button", { class: "btn primary", type: "submit", text: "Unlock" });
+      var cancel = h("button", { class: "btn", type: "button", text: "Cancel" });
+      var form = h("form", { class: "card stack teacher-dialog", role: "dialog", "aria-modal": "true", "aria-labelledby": "tdTitle" },
+        h("h2", { id: "tdTitle", text: "🎓 Teacher mode" }),
+        h("p", { class: "small muted", text: "Type the teacher code. Teacher mode lets you open any lesson or stage, show answers and pause the timer. Nothing in teacher mode goes to the scoreboard." }),
+        h("label", { class: "field", for: "teacherCode" }, "Teacher code", inp), msg, h("div", { class: "row end" }, cancel, ok));
+      var wrap = h("div", { class: "teacher-overlay", id: "teacherDialog" }, form);
+      function close() { wrap.remove(); tBtn.focus(); }
+      cancel.addEventListener("click", close);
+      wrap.addEventListener("click", function (e) { if (e.target === wrap) close(); });
+      form.addEventListener("keydown", function (e) { if (e.key === "Escape") close(); });
+      form.addEventListener("submit", function (e) {
+        e.preventDefault(); ok.disabled = true; msg.className = "feedback muted"; msg.textContent = "Checking…";
+        checkTeacherCode(inp.value).then(function (good) {
+          ok.disabled = false;
+          if (!good) { msg.className = "feedback bad"; msg.textContent = "That code isn't right."; inp.select(); return; }
+          setTeacher(true); paintTeacher(); wrap.remove(); renderHome();
+        }, function (err) { ok.disabled = false; msg.className = "feedback bad"; msg.textContent = err.message; });
+      });
+      document.body.appendChild(wrap);
+      inp.focus();
+    }
+    function teacherPanel() {
+      var rows = stages.map(function (sd, i) {
+        var bs = [];
+        if (sd.teach) { var bl = h("button", { class: "btn small", type: "button", text: "📖 Lesson " + (i + 1) }); bl.addEventListener("click", function () { teacherGo(i, true); }); bs.push(bl); }
+        var bt = h("button", { class: "btn small primary", type: "button", text: "▶ " + (stages.length > 1 ? "Stage " + (i + 1) : "Start") }); bt.addEventListener("click", function () { teacherGo(i, false); }); bs.push(bt);
+        return h("div", { class: "teacher-row" }, h("span", { text: (stages.length > 1 ? (i + 1) + ". " : "") + (sd.icon ? sd.icon + " " : "") + sd.name + (sd.part ? " (Part " + sd.part + ")" : "") }), h("span", { class: "row" }, bs));
+      });
+      var leave = h("button", { class: "btn ghost", type: "button", text: "Leave teacher mode" });
+      leave.addEventListener("click", function () { setTeacher(false); paintTeacher(); renderHome(); });
+      return h("section", { class: "card stack teacher-panel" },
+        h("div", { class: "kicker", text: "🎓 Teacher mode (this device)" }),
+        h("p", { class: "small", text: "Open any lesson or stage, as often as you like. Timers are paused, every question has a “Show answer” button, and nothing is sent to the class scoreboard. A student's own run in this browser is not touched." }),
+        h("div", { class: "teacher-list" }, rows), h("div", { class: "row end" }, leave));
+    }
+    function teacherGo(i, lesson) {
+      var run = newRun("teacher");
+      run.player = { nickname: "Teacher", team: "", classCode: "" };
+      run.stage = i; run.taught = {};
+      if (!lesson || !stages[i].teach) run.taught[i] = true;
+      go(run);
+    }
+
     /* ---------- home ---------- */
     function renderHome() {
       stopTimer(); clear(app); top();
       var V = window.VIS;
+      if (teacherOn()) app.appendChild(teacherPanel());
       app.appendChild(h("section", { class: "card stack" },
         h("div", { class: "kicker", text: def.kicker }),
         h("h1", { text: def.title }),
@@ -433,12 +504,12 @@
       var seenBefore = !!st.taughtEver[sd.id];
       function done() {
         run.taught = run.taught || {}; run.taught[run.stage] = true;
-        st.taughtEver[sd.id] = true; persist();
+        if (run.mode !== "teacher") { st.taughtEver[sd.id] = true; persist(); }
         renderStageIntro(run);
       }
       var head = h("section", { class: "card stack" },
         h("div", { class: "kicker" }, "Lesson " + (run.stage + 1) + " of " + stages.length, sd.part ? " \u00b7 " : "", sd.part ? h("span", { class: "part-chip", text: partOf(sd) }) : null,
-          run.mode === "practice" ? " \u00b7 practice run" : ""),
+          modeTag(run)),
         h("h1", {}, sd.icon ? h("span", { "aria-hidden": "true", text: sd.icon + " " }) : null, sd.lessonTitle || sd.name),
         h("p", { class: "muted small", text: "Not timed, not scored: try things out. Stage " + (run.stage + 1) + " (" + sd.name + ") comes straight after, with the timer on." }),
         badgeOf(sd));
@@ -466,7 +537,7 @@
       var sd = stages[run.stage];
       var items = itemsFor(run, run.stage);
       app.appendChild(h("section", { class: "card stack" },
-        h("div", { class: "kicker" }, "Stage " + (run.stage + 1) + " of " + stages.length, sd.part ? " \u00b7 " : "", sd.part ? h("span", { class: "part-chip", text: partOf(sd) }) : null, run.mode === "practice" ? " · practice" : ""),
+        h("div", { class: "kicker" }, "Stage " + (run.stage + 1) + " of " + stages.length, sd.part ? " \u00b7 " : "", sd.part ? h("span", { class: "part-chip", text: partOf(sd) }) : null, modeTag(run)),
         h("h1", {}, sd.icon ? h("span", { "aria-hidden": "true", text: sd.icon + " " }) : null, sd.name),
         badgeOf(sd),
         h("p", { class: "goal-line", text: sd.goal })));
@@ -503,7 +574,7 @@
           h("span", {}, "Item ", h("b", { text: (run.item + 1) + "/" + items.length })),
           h("span", {}, h("b", { text: String(tot.points) }), " pts"),
           streak >= 2 ? h("span", { class: "streak" }, "🔥 " + streak, h("span", { class: "hud-more", text: " in a row (next right answer ×1.5)" })) : null,
-          run.mode === "practice" ? h("span", { class: "pill", text: "Practice" }) : null),
+          run.mode === "practice" ? h("span", { class: "pill", text: "Practice" }) : run.mode === "teacher" ? h("span", { class: "pill teacher-pill", text: "🎓 Teacher mode" }) : null),
         h("div", { class: "row" }, timer, secsEl));
       app.appendChild(hudCard);
       var tb = document.querySelector(".topbar");
@@ -531,6 +602,30 @@
         itemCard.appendChild(h("div", { class: "row" }, hb));
       }
       itemCard.appendChild(hintBox);
+      if (run.mode === "teacher") {   // teacher: show the right answer and its explanation (nothing is submitted)
+        var ansBox = h("div");
+        var sa = h("button", { class: "btn small teacher-answer", type: "button", text: "🎓 Show answer" });
+        sa.addEventListener("click", function () {
+          var right = typeof it.solve === "function" ? it.solve() : it.key, res;
+          try { res = it.grade(right); } catch (e) { res = null; }
+          var ex = res && res.explain;
+          clear(ansBox);
+          var moves = [];   // the right moves in words (search words, query, calculation, …)
+          if (right && typeof right === "object" && !Array.isArray(right)) {
+            if (right.words) moves.push("Search words: " + right.words.join(" + "));
+            if (right.query) moves.push("Search: " + right.query);
+            if (right.tokens) moves.push("Calculator: " + right.tokens.join(" "));
+            if (right.bad) moves.push("Hidden order: sentence " + right.bad.map(function (i) { return i + 1; }).join(", "));
+          } else if (Array.isArray(right)) moves.push("Answer: " + right.join(" "));
+          ansBox.appendChild(h("div", { class: "card soft stack teacher-answer-card", role: "note" }, h("b", { text: "🎓 Right answer (teacher view, not submitted)" }),
+            moves.length ? h("p", { class: "small mono", text: moves.join(" · ") }) : null,
+            ex ? (typeof ex === "string" ? h("p", { class: "small", text: ex }) : Array.isArray(ex) ? ex.map(function (t) { return h("p", { class: "small", text: t }); }) : ex)
+              : h("p", { class: "small mono", text: typeof right === "object" ? JSON.stringify(right) : String(right) })));
+          if (ctl.reveal) { try { ctl.reveal(right, res); } catch (e) { /* display only */ } }
+        });
+        itemCard.appendChild(h("div", { class: "row" }, sa));
+        itemCard.appendChild(ansBox);
+      }
       var resultHolder = h("div");
       app.appendChild(resultHolder);
       var f = box.querySelector("[data-focus]") || box.querySelector("button, input, textarea, select");
@@ -545,8 +640,8 @@
         secsEl.textContent = Math.ceil(left) + "s";
         if (left <= 0 && !done) finish(ctl.collect ? ctl.collect() : null, true);
       }
-      timerId = setInterval(tick, 200);
-      tick();
+      if (run.mode === "teacher") { bar.style.width = "100%"; secsEl.textContent = "⏸ paused"; timer.setAttribute("aria-valuenow", String(limit)); }   // teacher: no time pressure
+      else { timerId = setInterval(tick, 200); tick(); }
 
       if (TEST) window.ARENA_TEST = { item: it, run: run, submit: function (a) { finish(a, false); } };
 
@@ -645,17 +740,17 @@
         sd.lesson ? h("div", { class: "card soft lesson-card" }, h("div", { class: "lesson-icon", "aria-hidden": "true", text: "💡" }), h("div", {}, h("b", { text: "What this stage shows: " }), sd.lesson)) : null,
         !run.complete && sd.part && stages[si + 1] && stages[si + 1].part !== sd.part
           ? h("div", { class: "card why stack" }, h("h2", { text: "🎉 Part " + sd.part + " complete" }),
-              h("p", { text: "A good place for a break. Part " + stages[si + 1].part + " starts with the lesson for stage " + (si + 2) + ". Your points so far are already on the scoreboard." })) : null,
+              h("p", { text: "A good place for a break. Part " + stages[si + 1].part + " starts with the lesson for stage " + (si + 2) + "." + (sendsToBoard(run) ? " Your points so far are already on the scoreboard." : "") })) : null,
         sendsToBoard(run) ? statusEl() : null,
         run.complete ? null : resumeNote(run),
         h("div", { class: "row end" }, home, next)));
       next.focus({ preventScroll: true });
-      if (run.complete) markSiteDone(def.game + "-arena");
+      if (run.complete && run.mode !== "teacher") markSiteDone(def.game + "-arena");
     }
 
     function renderFinal(run) {
       stopTimer(); clear(app); top();
-      markSiteDone(def.game + "-arena");
+      if (run.mode !== "teacher") markSiteDone(def.game + "-arena");
       var t = runTotals(run);
       var tbody = h("tbody");
       stages.forEach(function (sd, i) {
@@ -666,11 +761,11 @@
           h("td", { class: "num", text: String(sr.filter(function (r) { return r.hint; }).length) }),
           h("td", { class: "num", text: String(sr.reduce(function (a, r) { return a + r.points; }, 0)) })));
       });
-      var again = h("button", { class: "btn primary", type: "button", text: "Practice run (not scored)" });
-      again.addEventListener("click", function () { st.practice = newRun("practice"); persist(); go(st.practice); });
+      var again = run.mode === "teacher" ? h("button", { class: "btn primary", type: "button", text: "🎓 Back to teacher menu" }) : h("button", { class: "btn primary", type: "button", text: "Practice run (not scored)" });
+      again.addEventListener("click", function () { if (run.mode === "teacher") { renderHome(); return; } st.practice = newRun("practice"); persist(); go(st.practice); });
       var home = h("a", { class: "btn", href: "../index.html", text: "All games" });
       app.appendChild(h("section", { class: "card stack" },
-        h("div", { class: "kicker", text: run.mode === "official" ? "Your official run" : "Practice run (not on the scoreboard)" }),
+        h("div", { class: "kicker", text: run.mode === "official" ? "Your official run" : run.mode === "teacher" ? "🎓 Teacher mode (not on the scoreboard)" : "Practice run (not on the scoreboard)" }),
         h("div", { class: "big-points", text: t.points + " points" }),
         h("p", { class: "muted", text: t.correct + " of " + t.items + " fully right · " + t.hints + " hint" + (t.hints === 1 ? "" : "s") + " · " + Math.round(t.secs / 60) + " min of answering" }),
         h("div", { class: "table-wrap" }, h("table", {},

@@ -252,3 +252,14 @@ footer button { background: none; border: 0; color: var(--ink-2); text-decoratio
 .mc-bar i { display: block; height: 100%; background: var(--accent); }
 .mc-pct { text-align: right; font-variant-numeric: tabular-nums; }
 @media (max-width: 480px) { .hide-sm { display: none; } .topbar { gap: 8px; padding: 10px 12px; } }
+
+/* ---------- teacher mode (1 Oct 2026) ---------- */
+.teacher-btn { cursor: pointer; border: 1px solid var(--line); font: inherit; }
+.teacher-overlay { position: fixed; inset: 0; z-index: 50; background: rgba(0, 0, 0, .35); display: grid; place-items: center; padding: 16px; }
+.teacher-dialog { width: min(420px, 100%); background: var(--surface); }
+.teacher-panel { border: 2px solid var(--accent); }
+.teacher-list { display: grid; gap: 6px; }
+.teacher-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 12px; padding: 4px 0; border-bottom: 1px solid var(--line); }
+.teacher-row .row { gap: 6px; }
+.teacher-pill { background: var(--accent-soft); }
+.teacher-answer-card { border-left: 4px solid var(--accent); }
