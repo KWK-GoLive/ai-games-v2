@@ -88,7 +88,7 @@ A test copy of Part 1 with **lesson and stage 8 "Meaning brain"** (toy model v2:
 - `v21/index.html` (preview landing page), `v21/llm/` and `v21/final/` (copies of `llm/` and `final/` with the changes; they load the unchanged shared files from `../../shared/`), `v21/shared/model2.js` (toy v2), `v21/llm/data/toy2.js` (made-up chats, prompts, requests), `v21/llm/js/toy2.js` (stage 8 and final items), `v21/board.html` + `v21/shared/board.js` (board for the preview games only).
 - Game IDs `llm21` (8 stages) and `llmfinal21`; `apps-script/Code.gs` accepts them (paste it and deploy a new version, see Scoreboard).
 - To go back to v2.0 at any time: `VERSION-2.0.md` (GitHub commit 34725ff and the `ai-games-v2.0.zip` snapshot).
-- Tests: `node tests/check-toy2.js` (every toy-v2 key recomputed by a separate implementation over 300 seeds; no overlap between lesson, stage and final data) and `python3 tests/v21-play.py` (lesson 8 and stage 8 at 1100 and 360 px, an official run reaching the llm21 board, the 14-question final, v2.0 unchanged).
+- Tests: `node tests/check-toy2.js` (every toy-v2 key recomputed by a separate implementation over 1500 seeds (SEEDS=4000 for more); guessing rules for every item kind checked; no overlap between lesson, stage and final data) and `python3 tests/v21-play.py` (lesson 8 and stage 8 at 1100 and 360 px, an official run reaching the llm21 board, the 14-question final, v2.0 unchanged).
 
 ## Teacher mode
 

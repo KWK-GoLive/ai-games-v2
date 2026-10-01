@@ -44,5 +44,43 @@ All round-2 fixes verified; 2000-seed structural check clean (4 distinct options
 | 3 | Minor | Final rule card lacked the score and % formulas | Added: chat score, answer %, copy rule. |
 | 4 | Minor | Rank check too weak | Replaced by the per-part guessing-rule checks above. |
 
-## Unreviewed fixes
+## Unreviewed fixes (after round 3; reviewed in round 4)
 All round-3 fixes above. After them: check-toy2 (all checks), check-data, check-backend, selfcheck-v21 (clean) and v21-play pass.
+
+## Round 4 (full review, requested by the teacher: 2 more rounds)
+All lesson 8 numbers recomputed and correct; v2.0 byte-identical; all suites pass. The round-3 fixes were checked and found incomplete.
+
+| # | Severity | Finding | Fix |
+|---|---|---|---|
+| 1 | Major | Share %: "closest to 25%" right 46% (stage); "closest to points × 3" 60%, "× 2" 47–63% | New `shareOptions`: the key's place among the sorted options is random; the "forgot to divide" mistakes (points × 2, × 3) are offered when they fit; other wrong options come from the same spread of values real keys have; a round-number guard (20/25/30/33/40/50) half the time; answers whose % happens to be within 4 of their points/×2/×3 are never asked. Over 3000 seeds every rule ≤ 39% (stage) / ≤ 34% (final); `check-toy2.js` checks 16 rules + ×2/×3 per part. |
+| 2 | Major | Most-say: "the chat sharing the most words" right 94% (stage), so the lesson's point was never tested | Stage and final chat sets redesigned like the lesson's (4 "when does the … open/close" chats make those words common; topic words are rare). 9 questions where a rare word beats a chat sharing more words; ~65% of most-say items come from these. Measured: naive rule 31% (stage) / 35% (final); "same first word" 23% / 35%. Checked by test (≤ 40%, rare ≥ 55%). |
+| 3 | Major | Copy items: the key was the only capitalised option (2 of 3 final prompts) or the only option from the prompt | New prompts each contain a second name/pair; wrong options are the same kind of word and two of them come from the prompt (e.g. Korn / Dao / Lee / Coach). Checked by test. |
+| 4 | Major | Lesson 8 never had students count chats themselves; the stage chat box cut off chats 7–8 on phones | Lesson 8 step 2 now asks students to count ("how many chats' questions contain 'when'?", then 'bank', noting answers don't count) and says stage 8 "which chat" items show only the table. Stage chat list shown in full (no inner scroll). |
+| 5 | Minor | Share maths harder in the stage | Lesson note: numbers are less round (9 ÷ 47 ≈ 19%), options ≥ 5 apart so a close estimate is enough; same in the stage hint. |
+| 6 | Minor | Name capitalisation leaked into toy-v1 stages | Names are now applied only to toy-v2 text (`TOY2.dw`); toy v1 pages display as in v2.0. |
+| 7 | Minor | Preview board said "All 7 stages", "Part B (5–7)", broken link | "All 8 stages", "Part B (5–8)"; link goes to the v2.0 teacher view (labelled). |
+| 8 | Minor | Most-say explanation always said "rare words count more" | Now depends on whether a chat sharing more words lost. |
+| 9 | Minor | 0-point rule worded differently | Lesson table now "in every chat (or none) → 0", like the other places. |
+| 10 | Minor | "Attention weights are learned" unsupported | Wording "learns how to decide how much each word counts (its attention)"; new evidence rows 7–8 quote Vaswani §3.2.2 ("learned linear projections") and §3.4 ("predicted next-token probabilities"); excerpt added to `v21src/sources-text/Vaswani2017/web.txt`. |
+| 11 | Minor | "Blend of chances" unsupported | Now "picks the next word from the chances (lesson 3)", supported by §3.4 row. |
+| 12 | Minor | "it can tell that 'bank' matters here" overclaims | "it can learn that words like 'bank' matter here". |
+| 13 | Minor | Copy feedback less hedged than the source | "Real models tend to do this too … more likely to copy". |
+| 14 | Minor | Final end text "everything a language model does: count…" | "everything these toy models do". |
+| 15 | Minor | Stale counts (README 300 seeds; items.js header) | Updated. |
+| 16 | Minor | Stage 8 time estimate low | Guide: lesson 8 about 8–10 min, stage 8 about 6–8 min, final +3–4 min. |
+
+## Round 5 (delta review + full read of the changed parts; the last requested round)
+All round-4 fixes verified (rare-word questions checked by hand; lesson 8 numbers recomputed; v1 pages no longer capitalise "captain"/"coach"; evidence rows 7–8 quotes present). All suites pass.
+
+| # | Severity | Finding | Fix (unreviewed: round 5 was the last round) |
+|---|---|---|---|
+| 1 | Major | Most-say: "highest-numbered chat" right 68%, "the option that doesn't start with when" 69% (the 4 "when" chats were always chats 1–4) | The chat order is shuffled for every question (ties are excluded, so keys don't depend on order); wrong options always include one chat whose question starts differently from the runner-up's. Test adds "highest/lowest-numbered" and "odd one out" rules (≤ 40%). Measured: naive 31%, same first word 21–22%, first option 25–26%. |
+| 2 | Major | Final pools too small (3 share questions; 66% of most-say = zoo corner open/close); "only multiple of 5" ≈ 52%, "closest to 66/70/75" ≈ 50%; 95–100% options looked silly | Second final set "Night Market" added: final share pool 7 questions, most-say 15 (5 rare); 15 different final questions now appear. Options never 95–100% when 2+ answers have points. Round-number guard extended to 60/66/70/75 and raised to 90%. Test adds these rules; passes at 1500 and 4000 seeds (best rule ≤ 37%). |
+| 3 | Minor | Copy: the key was the earliest option in the prompt (7 of 9) | 4 prompts now copy the second pair (e.g. "… red lion . i typed red" → lion): key earliest in 2 of 9. |
+| 4 | Minor | Odd capitals/wording ("our Coach", "slow Joe", "when does the yoga class open", "science floor", "how much is the pool") | "coach" no longer capitalised; mascot prompt reworded (tiny Joe / big Sam); unnatural questions removed or replaced. |
+| 5 | Minor | Lesson note said "the" is worth 1 or 2 in stage 8 | Now "for example 'the' = 1 at the bus station". |
+| 6 | Minor | Overlaps with stage 7 (toy v1): "when does the library open/close", "when does the pool open" (lesson 8), "when does the park open"; set names Hilltop/Sunny | Renamed: Maple Study Centre, lesson 8 bakery, Green Garden, Uptown Gym. Test now checks no overlap with stage 7 chats/questions (lesson 8 reuses 3 lesson-7 corner-shop questions on purpose) and no echoing set names. |
+| 7 | Minor | Guide source list lacked §3.2.2/§3.4 | Added. |
+
+## Unreviewed fixes
+All round-5 fixes above. After them: check-toy2 (68,520 checks; also run with 4000 seeds), check-data, check-backend, selfcheck-v21 (clean), v21-play and playthrough pass.
