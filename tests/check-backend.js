@@ -79,6 +79,13 @@ check(post({ game: "llm2", nickname: "Vi", runId: "v1", stage: 8 }).fatal === tr
 check(post({ game: "llm", nickname: "Vi", runId: "v0", stage: 7 }).fatal === true, "v1 llm still refuses stage 7");
 check(post({ game: "warmup", nickname: "Vi", runId: "w1", stage: 1, items: 8, points: 800 }).ok && post({ game: "warmup", nickname: "Vi", runId: "w1", stage: 2 }).fatal === true, "warmup has 1 stage");
 check(post({ game: "llmfinal", nickname: "Vi", runId: "f1", stage: 1, items: 12, points: 1200 }).ok && post({ game: "llmfinal", nickname: "Vi", runId: "f1", stage: 2 }).fatal === true, "llmfinal has 1 stage");
+// v2.1 preview games: llm21 (8 stages, toy model v2), llmfinal21 (1 stage, 14 questions)
+check(post({ game: "llm21", nickname: "Pv", runId: "p21", stage: 8, points: 250 }).ok, "llm21 accepts stage 8");
+check(post({ game: "llm21", nickname: "Pv", runId: "p21", stage: 9 }).fatal === true, "llm21 refuses stage 9");
+check(post({ game: "llmfinal21", nickname: "Pv", runId: "pf21", stage: 1, items: 14, points: 1400 }).ok && post({ game: "llmfinal21", nickname: "Pv", runId: "pf21", stage: 2 }).fatal === true, "llmfinal21 has 1 stage");
+var b21 = S.doGet({ action: "board", game: "llm21", classCode: "SEC1" });
+check(b21.players[0].perStage.length === 8 && b21.players[0].perStage[7] === 250, "llm21 board has 8 stage columns: " + JSON.stringify(b21.players[0]));
+check(S.doGet({ action: "board", game: "llm2", classCode: "SEC1" }).players.every(function (p) { return p.nickname !== "Pv"; }), "llm21 rows never appear on the llm2 board");
 post({ game: "llm2", nickname: "Vi", runId: "v1", stage: 1, points: 100 });
 var b7 = S.doGet({ action: "board", game: "llm2", classCode: "SEC1" });
 check(b7.players[0].perStage.length === 7 && b7.players[0].perStage[6] === 300 && b7.players[0].perStage[0] === 100 && b7.players[0].points === 400, "llm2 board has 7 stage columns: " + JSON.stringify(b7.players[0]));
