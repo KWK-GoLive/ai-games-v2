@@ -126,15 +126,17 @@
   }
 
   /* v2.1 · toy model v2 items (stage 8 and final questions 13-14) */
+  function T2dw(w) { return window.TOY2.dw(w); }                 // toy-v2 names (Mint, Pong, Biscuit ...)
+  function ds2(str) { return M.tokenize(str).map(T2dw).join(" "); }
   function toy2Chats(it) {
     return h("div", { class: "stack" },
       h("div", { class: "small muted", text: "The example chats (" + it.chat.name + "). Toy v2 gives every chat a share, by the points of the words it shares with the new question:" }),
-      h("div", { class: "textbox" }, it.chat.qa.map(function (p, i) { return (i ? "\n" : "") + "Chat " + (i + 1) + "  Q: " + ds(p[0]) + "  A: " + ds(p[1]); })));
+      h("div", { class: "textbox", style: "max-height:none" }, it.chat.qa.map(function (p, i) { return (i ? "\n" : "") + "Chat " + (i + 1) + "  Q: " + ds2(p[0]) + "  A: " + ds2(p[1]); })));
   }
   function toy2Points(it) {
     return h("div", { class: "card soft stack" },
       h("div", { class: "small muted", text: "Word points for this question (rarer words count more):" }),
-      h("div", { class: "counts" }, it.analysis.words.map(function (w) { return h("div", { class: "c" }, h("b", { text: M.displayWord(w.word) }), w.points + (w.points === 1 ? " point" : " points") + (w.chats ? " (in " + w.chats + " chat" + (w.chats === 1 ? "" : "s") + ")" : " (not in any chat)")); })));
+      h("div", { class: "counts" }, it.analysis.words.map(function (w) { return h("div", { class: "c" }, h("b", { text: T2dw(w.word) }), w.points + (w.points === 1 ? " point" : " points") + (w.chats ? " (in " + w.chats + " chat" + (w.chats === 1 ? "" : "s") + ")" : " (not in any chat)")); })));
   }
   function toy2Table() {
     return h("p", { class: "small muted", text: "Points: a word in 1 chat = 8, 2 chats = 4, 3\u20134 chats = 2, 5 or more = 1, every chat (or none) = 0." });
@@ -144,10 +146,10 @@
     if (it.kind === "t2share") {
       box.appendChild(toy2Chats(it)); box.appendChild(toy2Points(it));
       box.appendChild(h("div", { class: "card soft stack" }, h("div", { class: "small muted", text: "Each chat's score (the points of the words it shares):" }),
-        h("div", { class: "counts" }, it.analysis.rows.filter(function (r) { return r.score > 0; }).map(function (r) { return h("div", { class: "c" }, h("b", { text: "Chat " + (r.index + 1) }), r.score + (r.score === 1 ? " point" : " points") + " \u2192 \u201c" + ds(r.a) + "\u201d"); }))));
+        h("div", { class: "counts" }, it.analysis.rows.filter(function (r) { return r.score > 0; }).map(function (r) { return h("div", { class: "c" }, h("b", { text: "Chat " + (r.index + 1) }), r.score + (r.score === 1 ? " point" : " points") + " \u2192 \u201c" + ds2(r.a) + "\u201d"); }))));
     }
     if (it.kind === "t2copy") box.appendChild(h("div", { class: "stack" }, h("div", { class: "small muted", text: "The prompt so far (the model reads all of it):" }),
-      h("div", { class: "textbox" }, it.prompt.split(" ").map(function (w) { return w === "." ? "." : M.displayWord(w); }).join(" ").replace(/ \./g, ".") + " \u2026")));
+      h("div", { class: "textbox" }, it.prompt.split(" ").map(function (w) { return w === "." ? "." : T2dw(w); }).join(" ").replace(/ \./g, ".") + " \u2026")));
     var c = W().choices(it.options, function (v) { api.submit(v); }, { oneCol: it.kind === "t2most" || it.kind === "t2addon" });
     box.appendChild(c.el);
     return { collect: c.collect, reveal: function () { c.reveal(it.key); } };

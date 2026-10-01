@@ -1,5 +1,5 @@
 /*
- * AI games v2 · LLM Arena — the items of the 7 stages and of the final Be the LLM Arena.
+ * AI games v2.1 preview · LLM Arena — the items of the 8 stages (stage 8 comes from toy2.js) and of the final (14 questions).
  * Every answer key is computed by the real toy model (../../shared/model.js), never typed in by hand.
  * No DOM here, so tests can run it in Node.
  *

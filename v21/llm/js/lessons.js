@@ -668,6 +668,7 @@
   /* ======================= Lesson 8 (v2.1): closer to a real LLM, toy model v2 ======================= */
   function lesson8(box, done, ctx) {
     var T2 = root.TOY2, LD = root.LLMA_TOY2_DATA.lesson, chats = LD.chats.qa;
+    var dw = T2.dw; // toy-v2 display (names) for this lesson only
     function cap(s) { var t = tok(s).map(dw).join(" "); return t.charAt(0).toUpperCase() + t.slice(1); }
     function chatList(question) {
       var qw = question ? tok(question) : [];
@@ -708,7 +709,7 @@
       { title: "Toy v1's weak spot", render: function (el) {
         el.appendChild(h("p", {}, "These are new example chats. Someone asks ", h("b", { text: "“" + cap(LD.meaning) + "?”" }), " Toy v1 (lesson 7) finds the longest ending “" + v1.trail[0].seen.filter(function (w) { return w !== M.START; }).map(dw).join(" ") + "” and answers “" + tok(v1.answer).map(dw).join(" ") + "”: the time of a different place, because it only matches words at the end."));
         el.appendChild(chatList());
-        el.appendChild(h("p", { text: "A real LLM learns how much each word should count for the question (its attention weights), so it can tell that “bank” matters here. Toy model v2 shows the idea with numbers you can work out by hand." }));
+        el.appendChild(h("p", { text: "A real LLM learns how to decide how much each word should count (its attention), so it can learn that words like “bank” matter here. Toy model v2 shows the idea with numbers you can work out by hand." }));
         el.appendChild(h("p", { class: "small muted", text: "Toy v2 is only a cartoon of how a model can weigh some words more than others. It still needs the exact same words: it can\u2019t link \u201chours\u201d with \u201copen\u201d. A real model keeps no chats and uses no points table; it learned a huge number of numbers (weights) during training." }));
       } },
       { title: "Rare words count more", locked: true, render: function (el, unlock) {
@@ -716,13 +717,17 @@
         el.appendChild(V.rules(T2.TABLE.map(function (r) { return r[0] + " → " + r[1] + " points"; })));
         el.appendChild(h("p", { class: "small muted", text: "Twice as rare = twice the points. A word in every chat gets 0 (and a word in no chat shares nothing anyway)." }));
         el.appendChild(chatList(LD.meaning));
-        var wb = rMean.words.filter(function (w) { return w.word === "bank"; })[0], wt = rMean.words.filter(function (w) { return w.word === "the"; })[0], wo = rMean.words.filter(function (w) { return w.word === "open"; })[0];
+        var wb = rMean.words.filter(function (w) { return w.word === "bank"; })[0], wt = rMean.words.filter(function (w) { return w.word === "the"; })[0], ww = rMean.words.filter(function (w) { return w.word === "when"; })[0];
         function o(list) { return list.map(function (n) { return { value: String(n), label: n + " points" }; }); }
+        function c(list) { return list.map(function (n) { return { value: String(n), label: n + (n === 1 ? " chat" : " chats") }; }); }
         chain(el, [
-          { q: "“Bank” is in " + wb.chats + " chat's question. How many points?", key: String(wb.points), options: o([2, 4, 8, 0]), right: "In 1 chat → 8 points: a rare word.", wrong: "Look at the table: in 1 chat = ?" },
-          { q: "“Open” is in " + wo.chats + " chats' questions (1, 2, 3 and 8). How many points?", key: String(wo.points), options: o([8, 4, 2, 1]), right: "In 4 chats → 2 points.", wrong: "3–4 chats = ?" },
+          { q: "Count: how many chats' questions contain “when”?", key: String(ww.chats), options: c([2, 3, 4, 8]), right: "Chats 1, 2, 3 and 4: " + ww.chats + " chats.", wrong: "Look at the highlighted words: count only the questions (Q), not the answers." },
+          { q: "So how many points does “when” get?", key: String(ww.points), options: o([8, 4, 2, 1]), right: "In 3–4 chats → 2 points: a common word.", wrong: "3–4 chats = ?" },
+          { q: "Count: how many chats' questions contain “bank”? How many points?", key: String(wb.points), options: [{ value: "8", label: "1 chat → 8 points" }, { value: "4", label: "2 chats → 4 points" }, { value: "2", label: "3 chats → 2 points" }, { value: "0", label: "every chat → 0 points" }],
+            right: "Only chat 5 (“What are the bank hours?”): 1 chat → 8 points, a rare word. (Chat 6 has “bank” only in its answer, which doesn't count.)", wrong: "Count only the questions. “Bank” in an answer doesn't count." },
           { q: "“The” is in all " + wt.chats + " chats. How many points?", key: String(wt.points), options: o([8, 1, 0, 2]), right: "In every chat → 0 points: it tells the model nothing.", wrong: "A word in every chat gets ?" }
         ], unlock);
+        el.appendChild(h("p", { class: "small muted", text: "In stage 8, “which chat” questions show only the table: you count the chats yourself, like here. “%” questions show the points for you." }));
       } },
       { title: "Which chat gets the most say?", locked: true, render: function (el, unlock) {
         el.appendChild(h("p", {}, "Each chat scores the points of the words it shares with the new question (each word once). Question: ", h("b", { text: "“" + cap(LD.meaning) + "?”" })));
@@ -768,7 +773,7 @@
             return n;
           }
         ], unlock);
-        el.appendChild(h("p", { class: "small muted", text: "In stage 8 some common words (like \u201cthe\u201d) are not in every chat, so they are worth 1 or 2 points there. Always use the points shown." }));
+        el.appendChild(h("p", { class: "small muted", text: "In stage 8 some common words are not in every chat, so they are worth 1 or 2 points there (for example \u201cthe\u201d = 1 at the bus station). The numbers are less round (for example 9 \u00f7 47 \u2248 19%), but the options are at least 5 apart, so a close estimate is enough." }));
       } },
       { title: "Copying from the prompt", locked: true, render: function (el, unlock) {
         el.appendChild(h("p", { text: "Real models also copy from the prompt itself: if a word appeared earlier, followed by another word, they tend to write that word again when the first one comes back. Researchers call the parts that do this “induction heads”." }));
@@ -787,7 +792,7 @@
         el.appendChild(V.cards([
           { icon: "🧸", title: "Toy v1 (lessons 1–7)", text: "Counts exact words. Matches the longest ending, then writes the word that most often comes next, word by word. Stages 1–7 and final questions 1–12." },
           { icon: "🧠", title: "Toy v2 (lesson 8)", text: "Rare words count more; every chat gets a share; copies from the prompt. Still a cartoon: it keeps the chats, uses a points table and needs the exact same words." },
-          { icon: "🤖", title: "A real LLM", text: "Keeps no chats. Learned a huge number of weights; decides how much each word counts (attention); picks the next word from a blend of chances; copies from the prompt; needs tools to look things up." },
+          { icon: "🤖", title: "A real LLM", text: "Keeps no chats. Learned a huge number of weights; decides how much each word counts (attention); picks the next word from its chances (lesson 3); copies from the prompt; needs tools to look things up." },
           { icon: "💬", title: "Stage 8", text: "Four questions: which chat gets the most say, an answer's %, copy from the prompt, and plain model or add-on." }], { cols: 2 }));
       } }
     ], done, ctx);
