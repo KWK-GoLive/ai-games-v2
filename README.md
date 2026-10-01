@@ -81,6 +81,12 @@ Each lesson uses its own 4–6-sentence text, which is different from the stage 
 - `shared/theme-chula.css`: the Chula theme (colours and the Bai Jamjuree font from the lecture deck), loaded last in every page; layout is untouched. The font comes from Google Fonts by a `<link>` in each page; if a network blocks Google Fonts, the pages use the system font (on a network that silently drops the connection, the first paint can wait until the browser gives up). Four small contrast fixes on top of the teacher's file: unread badge #0070c0, Part A/B chip text #005a9c, amber part-marks border, sender names on coloured bubbles at full white. The front-page game numbers keep their orange circles (as in the mockup).
 - `config.js`: `SCOREBOARD_URL`, `BOARD_REFRESH_SECONDS`, `TIME_FACTOR` (1.5 = 50% more time).
 
+## Teacher mode
+
+Every game page has a **🎓 Teacher** button in the top bar. The code (KWK-TEACH; only its SHA-256 is in `shared/arena.js`) turns on teacher mode in that browser (`localStorage` key `aig-teacher`) until "Leave teacher mode": a menu of every lesson and stage, paused timers, a "Show answer" button on every question (`item.solve()` for the agent items, `item.key` otherwise), and no traffic to the scoreboard (teacher runs are never saved as official or practice runs and never tick the front page). Not real security: it only keeps students from stumbling into it. `tests/teacher-mode.py` checks all 5 pages.
+
+In lesson 3 the spin animation now also runs (as one short, slow glide) when the computer is set to "reduce motion".
+
 ## Tests
 
 ```
@@ -92,6 +98,7 @@ node tests/check-agent-data.js  # agent: files = game texts, recording quotes, s
 python3 tests/agent-play.py     # agent: all lessons, stages and the Agent Arena by clicking, 3-phone rule, downloads, at 390 and 1100 px
 python3 tests/teacher.py        # live progress: a student plays all of Be the Agent + the Agent Arena; after every lesson/item the board shows the right position and points; the teacher view (4 boards, auto-refresh, fits 1280x720)
 python3 tests/check-contrast.py  # theme: 22 text/background pairs >= WCAG AA 4.5:1, colours read from the CSS
+python3 tests/teacher-mode.py   # teacher mode on all 5 pages: code, any stage, paused timer, Show answer, nothing sent (with a control run that does send)
 python3 tests/agent-devices.py  # agent by TAPPING on iPhone SE, iPhone 13, Galaxy S9+ (320 px), iPad portrait + landscape: 44 px targets, text >= 12 px, timer in view, new moves scrolled into view
 ```
 
