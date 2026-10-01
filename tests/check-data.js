@@ -174,6 +174,17 @@ eq(ans6(C.L6.onlyA), "at nine am", "L6 only 'A:' matches");
 eq(follow(cs6, ["[a]"]).map(function (x) { return x.w + " " + x.n; }).join(", "), "at 2, next 1, mr 1, yes 1", "L6 first answer words");
 eq(follow(cs6, ["[a]", "at"]).map(function (x) { return x.w + " " + x.n; }).join(", "), "nine 1, six 1", "L6 tie after 'A: at'");
 eq(backoff(cs6, ["[q]"].concat(toks(C.L6.partial), ["[a]"]), 8).k, 2, "L6: 'open A:' is the longest ending found");
+eq(ans6(C.L6.other), "at nine am", "L6 same question in other words");
+eq(backoff(cs6, ["[q]"].concat(toks(C.L6.other), ["[a]"]), 8).k, 4, "L6: 'the shop open A:' is the longest ending for the other-words question");
+eq(T.L6.qa[0][0] + " -> " + T.L6.qa[0][1], "when does the shop open -> at nine am", "L6: chat 1 is the same question (other words) with that answer");
+// The lesson's quick way (grow from "A:" to the left, stop at the first miss) finds the same ending as back-off from 8 words.
+function in6(e) { return cs6.some(function (sq) { for (var i = 0; i + e.length <= sq.length; i++) { if (e.every(function (w, j) { return sq[i + j] === w; })) return true; } return false; }); }
+["exact", "partial", "other", "onlyA"].forEach(function (c) {
+  var full = ["[q]"].concat(toks(C.L6[c]), ["[a]"]), g = 0;
+  for (var k = 1; k <= Math.min(full.length, 8); k++) { if (in6(full.slice(-k))) g = k; else break; }
+  var b = backoff(cs6, full, 8).k; if (b === full.length + 1) b = full.length;
+  eq(g, Math.min(b, full.length), "L6 quick way = longest ending: " + C.L6[c]);
+});
 [["three", 3, "kite"], ["two", 2, "car"], ["one", 1, "bus"]].forEach(function (x) {
   var r = backoff(seqsOf(T.L7), toks(C.L7[x[0]]), 3);
   eq(r.k + " " + top(r.f), x[1] + " " + x[2], "L7 " + C.L7[x[0]]);
