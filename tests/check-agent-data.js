@@ -90,6 +90,7 @@ for (var s = 1; s <= 120; s++) {
       n++;
       var g = it.grade(fullAnswer(it));
       check(g.frac === 1, "stage " + (si + 1) + " " + it.kind + " " + it.id + ": the right moves score full marks");
+      check(it.grade(typeof it.solve === "function" ? it.solve() : it.key).frac === 1, "stage " + (si + 1) + " " + it.kind + " " + it.id + ": teacher mode's Show answer (solve) scores full marks");
       if (it.kind === "calc") check(it.chips.every(function (c) { var r = I.evalChips([c]); return /^SUM\(/.test(c) || !(r.ok && Math.abs(r.value - it.key.value) < 0.01); }), "stage 4 " + it.id + ": no single number chip is already the answer");
       check(it.grade(it.sample(rng(n))).frac >= 0, "a random answer is graded");
       check(it.grade(null).frac === 0 || it.kind === "permission", "no answer scores 0");
@@ -107,6 +108,7 @@ for (var s = 1; s <= 120; s++) {
     var a = st.kind === "calc" ? st.solution : st.kind === "search" ? ["coffee", "price"] : st.key;
     if (st.kind === "calc") check(st.chips.indexOf(T.fmt(st.value).replace(/,/g, "")) < 0 && st.chips.indexOf(String(st.value)) < 0, "arena step " + st.id + ": the answer itself is not a chip");
     check(R.grade(st, a).frac === 1, "arena step " + st.id + " right answer scores 1");
+    check(R.grade(st, st.kind === "calc" ? st.solution : st.kind === "search" ? ["coffee", "price"] : st.key).frac === 1, "arena step " + st.id + ": teacher mode's Show answer scores 1");
     if (st.options) check(st.options.some(function (o) { return o.value === st.key; }), "arena step " + st.id + ": the key is an option");
   });
 }
