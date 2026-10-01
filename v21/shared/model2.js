@@ -50,7 +50,7 @@
   // Display for toy-v2 text only (stage 8, final 13-14, lesson 8): capitalises the made-up names. The toy v1
   // pages keep shared/model.js's own display (so "captain" or "coach" in the v1 training texts stay as in v2.0).
   var NAMES = { mrs: "Mrs", miss: "Miss", mr: "Mr", kim: "Kim", dan: "Dan", mint: "Mint", uncle: "Uncle", tam: "Tam", noi: "Noi", aunt: "Aunt",
-    korn: "Korn", dao: "Dao", lee: "Lee", pong: "Pong", sir: "Sir", lady: "Lady", fluffy: "Fluffy", rose: "Rose", tom: "Tom",
+    korn: "Korn", dao: "Dao", lee: "Lee", pong: "Pong", sir: "Sir", lady: "Lady", fluffy: "Fluffy", rose: "Rose", tom: "Tom", lucas: "Lucas", buttercup: "Buttercup", tim: "Tim",
     captain: "Captain", biscuit: "Biscuit", pepper: "Pepper", rex: "Rex", zibo: "Zibo", max: "Max", rolo: "Rolo", bobo: "Bobo",
     joe: "Joe", sam: "Sam", french: "French", b: "B", i: "I" };
   function dw(w) { return NAMES[w] || (root.BTL && root.BTL.Model ? root.BTL.Model.displayWord(w) : w); }
