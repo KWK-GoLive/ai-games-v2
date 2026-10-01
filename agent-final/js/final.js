@@ -22,6 +22,7 @@
         skill: st.kind === "calc" ? "Calculator" : st.kind === "search" ? "File search" : /query|open/.test(st.id) ? "Web search" : st.id === "inject" ? "Hidden orders" : st.id === "perm" ? "Permissions" : st.id === "memo" ? "File maker" : st.id === "reply" ? "Reply" : "Which app?",
         hint: st.hint,
         grade: function (a) { return R.grade(st, a); },
+        solve: function () { return st.kind === "calc" ? st.solution : st.kind === "search" ? ["coffee", "price"] : st.key; },
         render: function (box, api) {   // on short screens, show the first move below the chat history
           var ctl = this.renderStep(box, api), first = box.querySelector(".move");
           if (first) A.showFirst(box.firstChild, first);
