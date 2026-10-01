@@ -40,7 +40,7 @@ It is taught in lesson 8, tested in a scored stage 8 and in 2 new final question
   - copy from the prompt;
   - needs an add-on?
   - Several made-up chat sets and prompts, so runs differ; nothing from lesson 8 reused. Part B = stages 5–8.
-- **LLM final:** 12 → 14 questions. 13 = a toy-v2 chat question (most say or share %); 14 = copy from the prompt or needs an add-on. The rule card says questions 13–14 use toy v2 word points. The end text is reworded: "do the same" becomes what real models keep (next-word prediction) and what differs (meaning, blending, prompt copying, tools).
+- **LLM final:** 12 → 14 questions. 13 = a toy-v2 *which chat gets the most say* question (changed in review round 7: the final has no % question, see the review log); 14 = copy from the prompt or needs an add-on. The rule card says questions 13–14 use toy v2 word points. The end text is reworded: "do the same" becomes what real models keep (next-word prediction) and what differs (meaning, blending, prompt copying, tools).
 - **Other main-game text:**
   - Lesson 7's toy-vs-real card and lesson 4's "No exact matching" card point to lesson 8 ("lesson 8 shows a model closer to this").
   - Stage 7 and lesson 7 rules are unchanged (they stay toy v1).

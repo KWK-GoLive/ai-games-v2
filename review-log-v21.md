@@ -82,5 +82,44 @@ All round-4 fixes verified (rare-word questions checked by hand; lesson 8 number
 | 6 | Minor | Overlaps with stage 7 (toy v1): "when does the library open/close", "when does the pool open" (lesson 8), "when does the park open"; set names Hilltop/Sunny | Renamed: Maple Study Centre, lesson 8 bakery, Green Garden, Uptown Gym. Test now checks no overlap with stage 7 chats/questions (lesson 8 reuses 3 lesson-7 corner-shop questions on purpose) and no echoing set names. |
 | 7 | Minor | Guide source list lacked §3.2.2/§3.4 | Added. |
 
-## Unreviewed fixes
+## Unreviewed fixes (after round 5; reviewed in round 6)
 All round-5 fixes above. After them: check-toy2 (68,520 checks; also run with 4000 seeds), check-data, check-backend, selfcheck-v21 (clean), v21-play and playthrough pass.
+
+## Round 6 (full review, requested by the teacher: 2 more rounds)
+All suites pass; lesson 8 numbers recomputed; explanations match the shuffled chat numbering in 9,000 items; sources and literature rows accurate; v2.0 isolated.
+
+| # | Severity | Finding | Fix |
+|---|---|---|---|
+| 1 | Major | Lesson 8 step 3: the wrong option said "Chat 3 (When does the bakery open?): it's about the pool" (broken by the round-5 rename) | The option now names the chat that really is about the pool (chat 8 "Is the pool open today?"), found from the data; test checks such a chat exists. |
+| 2 | Major | Add-on: "question → tool, command → plain" right 100%; my/our/today and length cues too | Requests rewritten and added (stage pool 23, final 8): questions and commands, long and short, with and without "my/our/today/now" on both sides. All sentence-form rules ≤ 57% (stage) / ≤ 52% (final) for this 2-option item; tested (≤ 60%). |
+| 3 | Major | Copy: "the last option mentioned" 51–68%; final "shortest" 50% | Key position balanced (earliest/middle/latest 2-2-2 in stage and final); the word before the full stop is never the key; option lengths varied; 3 new final templates (cooking days, phone pin, cookies, boats) so the final no longer echoes the stage. All position/length rules ≤ 34%; tested. |
+| 4 | Major | Share %: "points × 2.5" (total ≈ 40) 49–67%; spotting the ×2/×3 decoys then picking near 50 up to 71% | ×2/×3 decoys removed. The guard now also covers estimates (×2, ×2.5, ×3, ×4, "about 3 points per other chat") and round numbers 20–75; a "only round number" guard; answers within 3–4 of these estimates are never asked; 5 more final questions with totals 15–31; the final prefers mid-range keys. Over 5000 seeds every rule ≤ 39%; tested at 1500 and 4000 seeds. |
+| 5 | Major | Most-say: "the chat sharing the topic (longest / content) word" right 65–88% | Accepted as intended: it is the lesson's point (an important rare word counts more). Documented in the teaching guide ("A design choice to know about"); position, odd-one-out and naive-count rules remain tested (≤ 40%). |
+| 6 | Minor | README claimed all item kinds were checked | Now true: copy and add-on rules added to `check-toy2.js`. |
+| 7 | Minor | Final copy templates echoed the stage | New final templates (see #3). |
+| 8 | Minor | Lesson 8 step 1 "new example chats" (they extend lesson 7's corner shop) | "These chats extend lesson 7's corner shop to the whole street." |
+| 9 | Minor | Feedback "shares the most words" when it only ties | "Other chats share as many words, but its words are worth more points." |
+| 10 | Minor | "night show open", "boat ride open" | Now "start" (pools re-checked). |
+| 11 | Minor | Log #9 (round 4) wording; literature row 3 positions | The lesson table shows "in every chat → 0" with "(or none)" stated in the note under it; row 3 now lists the stage 8 and final end texts. |
+
+## Round 7 (delta review + full read of the changed parts; the last requested round)
+All round-6 fixes present; lesson 8 recomputed by hand; all suites pass (also with 4000 seeds).
+
+| # | Severity | Finding | Fix (unreviewed: round 7 was the last round) |
+|---|---|---|---|
+| 1 | Major | The round-6 "start" rename made "open" rarer in the Night Market set; final rare-word questions fell from 5 to 3; zoo-corner key chat 45% of final most-say | "when does the night show open" restored (5 rare final questions again); "which chat" questions are now picked by winning chat first, so no winning chat exceeds ~21%. Tests: ≥ 5 rare final questions, no winning chat > 30%. |
+| 2 | Major | Final %: "nearest 45" ≈ 49% (two near-duplicate first-aid questions; small pool) | The final's question 13 is now always a *which chat* question (the final's chats give too few different % answers for a fair % question; stage 8 tests the %). Stage 8: % questions are chosen so every different right answer is equally likely, right answers kept ≥ 6 apart, every possible right answer is a guard target, and answers within 3 of points × 2.5/4/5/6 are never asked. Test: "nearest X" for every X from 5 to 95 and points × 2, 2.5, 3, 4, 5, 6 ≤ 40% (passes at 1500 and 4000 seeds). |
+| 3 | Major | Copy: "the option just before 'and'" 68–84% | Prompts reworded so the copied word is never next to "and" or the full stop (e.g. "mr korn from the north and …"); position balance kept (2-2-2 stage and final). Test: before/after "and" ≤ 40% (0% now). |
+| 4 | Major | Add-on: lookup verbs, writing verbs and time words gave 62–100% | 10 counterexamples added (e.g. "Write a summary of today's top news story" → lookup; "Check the paragraph below for spelling mistakes", "Tell me a bedtime story for tonight" → plain). Form rules (question/command, what-which-how, length) ≤ 62% and tested; the remaining word rules (time words ≈ 69–70%, writing verbs ≈ 68–74%) follow the concept itself and are documented as accepted in the guide ("Design choices"). |
+| 5 | Major | Two add-on keys arguable ("Translate my name card", "to-do list for my day") | "Translate the name card text I pasted below into English."; "Write a to-do list for a busy school day." |
+| 6 | Minor | Most-say "shortest/longest chat question" 54–65% | Longest now ≤ 18%; "shortest question" (≈ 51%, stage) follows the short topic chats and is documented with the topic-word design choice. |
+| 7 | Minor | "Train times … are not in the training text" overclaims | "… change, so the training text may be out of date: it needs a lookup." |
+| 8 | Minor | Lesson add-on "your town" | "my town". |
+| 9 | Minor | Lesson step 3 "only 'bank' is shared" vs the score list showing "the + bank" | "only 'bank' scores ('the' is worth 0)". |
+| 10 | Minor | "their team … go blue" cheering the other team; "phone pin is lucky seven" | "our team is red falcons … go red"; "phone password". |
+| 11 | Minor | Guide's design note overstated | Rewritten as "Design choices to know about (shortcuts we tested)": what is blocked, what is accepted and why. |
+| 12 | Minor | "who rides the red path"; 1%/3% options | Question removed; options are now at least 4%. ("how much is a duck ride" kept: it reads acceptably.) |
+| 13 | Minor | Repeat players can learn the stage-8 % answers | Noted in the guide. |
+
+## Unreviewed fixes
+All round-7 fixes above. After them: check-toy2 (64,125 checks; 169,077 with SEEDS=4000), check-data, check-backend, selfcheck-v21 (clean), v21-play and playthrough pass.
