@@ -44,15 +44,15 @@
   });
   var csvBtn = h("button", { class: "btn", type: "button", text: "Download results (CSV)" });
   var partRow = h("div", { class: "tabs toggle" + (HAS_PARTS[game] ? "" : " hidden"), role: "group", "aria-label": "which part" });
-  [["all", "All 7 stages"], ["A", "Part A (1\u20134)"], ["B", "Part B (5\u20137)"]].forEach(function (pp) {
+  [["all", "All 8 stages"], ["A", "Part A (1\u20134)"], ["B", "Part B (5\u20138)"]].forEach(function (pp) {
     var b = h("button", { type: "button", "aria-pressed": String(part === pp[0]), text: pp[1] });
     b.addEventListener("click", function () { part = pp[0]; Array.prototype.forEach.call(partRow.children, function (x) { x.setAttribute("aria-pressed", String(x === b)); }); syncUrl(); if (last) render(last); });
     partRow.appendChild(b);
   });
   var last = null;
   var projBtn = h("button", { class: "btn ghost", type: "button", text: "Big text" });
-  var teacherLink = h("a", { class: "btn", href: "teacher.html", text: "All 4 boards in one window ↗" });
-  function teacherHref() { teacherLink.href = "teacher.html" + (classCode ? "?class=" + encodeURIComponent(classCode) : ""); }
+  var teacherLink = h("a", { class: "btn", href: "../teacher.html", text: "v2.0 teacher view (all 4 class boards) ↗" });
+  function teacherHref() { teacherLink.href = "../teacher.html" + (classCode ? "?class=" + encodeURIComponent(classCode) : ""); }
   teacherHref();
   var form = h("form", { class: "row" },
     h("label", { class: "field", for: "cc", style: "display:flex;gap:8px;align-items:center" }, "Class code", codeIn),

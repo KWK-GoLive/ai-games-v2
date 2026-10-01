@@ -47,15 +47,14 @@
     for (var i = promptWords.length - 2; i >= 0; i--) if (promptWords[i] === last && i + 1 < promptWords.length - 1) return { at: i, word: promptWords[i + 1] };
     return null;
   }
-  // v2.1 only: capitalise the made-up names in the toy-v2 chats and prompts (shared/model.js stays as in v2.0)
-  var NAMES = { mrs: "Mrs", kim: "Kim", dan: "Dan", coach: "Coach", mint: "Mint", uncle: "Uncle", tam: "Tam", korn: "Korn",
-    sir: "Sir", fluffy: "Fluffy", captain: "Captain", biscuit: "Biscuit", zibo: "Zibo", max: "Max", joe: "Joe", french: "French", b: "B" };
-  if (root.BTL && root.BTL.Model && !root.BTL.Model.toy2Names) {
-    var base = root.BTL.Model.displayWord;
-    root.BTL.Model.displayWord = function (w) { return NAMES[w] || base(w); };
-    root.BTL.Model.toy2Names = true;
-  }
-  var api = { tokenize: tokenize, pointsFor: pointsFor, wordPoints: wordPoints, analyse: analyse, copyNext: copyNext,
+  // Display for toy-v2 text only (stage 8, final 13-14, lesson 8): capitalises the made-up names. The toy v1
+  // pages keep shared/model.js's own display (so "captain" or "coach" in the v1 training texts stay as in v2.0).
+  var NAMES = { mrs: "Mrs", miss: "Miss", mr: "Mr", kim: "Kim", dan: "Dan", mint: "Mint", uncle: "Uncle", tam: "Tam", noi: "Noi", aunt: "Aunt",
+    korn: "Korn", dao: "Dao", lee: "Lee", pong: "Pong", sir: "Sir", lady: "Lady", fluffy: "Fluffy", rose: "Rose", tom: "Tom",
+    captain: "Captain", biscuit: "Biscuit", pepper: "Pepper", rex: "Rex", zibo: "Zibo", max: "Max", rolo: "Rolo", bobo: "Bobo",
+    joe: "Joe", sam: "Sam", french: "French", b: "B", i: "I" };
+  function dw(w) { return NAMES[w] || (root.BTL && root.BTL.Model ? root.BTL.Model.displayWord(w) : w); }
+  var api = { tokenize: tokenize, dw: dw, pointsFor: pointsFor, wordPoints: wordPoints, analyse: analyse, copyNext: copyNext,
     TABLE: [["in 1 chat", 8], ["in 2 chats", 4], ["in 3–4 chats", 2], ["in 5 or more", 1], ["in every chat", 0]] };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   root.TOY2 = api;
