@@ -57,7 +57,7 @@ These are single runs; another run could behave differently.
 | 4 | The keyhole (context window): 1, 2 and 3 words, "no data", and **real window sizes** (see Sources) | Keyhole (6) |
 | 5 | Two-word keyhole plus back-off to 1 word | **Two-word boss** (3 whole continuations; large "2-WORD KEYHOLE" badge) |
 | 6 | Up to 3 words: the longest keyhole with data wins (3 → 2 → 1) | **Three-word boss** (6 single next-word questions) |
-| 7 | Answering questions: continue after "A:", shrink the keyhole, only "A:" left, supported vs made up, **toy vs real** | Chat brain (4) |
+| 7 | Answering questions: continue after "A:", how to work it out (4 moves; quick way: grow from "A:"), same question in other words, only "A:" left, supported vs made up, **toy vs real** | Chat brain (4) |
 
 Since 29 Sep 2026 the order of the last two is three-word boss (6), then Chat brain (7): 2 words → 3 words → a long keyhole for chats, and "making things up" leads into Part 2. The final's 12 questions follow the same order.
 
