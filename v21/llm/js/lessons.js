@@ -703,11 +703,12 @@
     var rMean = T2.analyse(chats, LD.meaning), rMost = T2.analyse(chats, LD.most), rShare = T2.analyse(chats, LD.share);
     var v1 = root.LLMA.chatAnswer({ id: "lesson8v1", qa: chats }, LD.meaning);
     var shop = rMean.rows[0], bank = rMean.topChat;
+    var poolChat = rMost.rows.filter(function (x) { return x.index !== rMost.topChat.index && tok(x.q).indexOf("pool") >= 0; })[0]; // the chat that IS about the pool (fewer points)
     var shareAns = rShare.answers[1], shareKey = Math.round(shareAns.pct);
     var copyW = tok(LD.copy.prompt), copyHit = T2.copyNext(copyW);
     stepper(box, [
       { title: "Toy v1's weak spot", render: function (el) {
-        el.appendChild(h("p", {}, "These are new example chats. Someone asks ", h("b", { text: "“" + cap(LD.meaning) + "?”" }), " Toy v1 (lesson 7) finds the longest ending “" + v1.trail[0].seen.filter(function (w) { return w !== M.START; }).map(dw).join(" ") + "” and answers “" + tok(v1.answer).map(dw).join(" ") + "”: the time of a different place, because it only matches words at the end."));
+        el.appendChild(h("p", {}, "These chats extend lesson 7's corner shop to the whole street. Someone asks ", h("b", { text: "“" + cap(LD.meaning) + "?”" }), " Toy v1 (lesson 7) finds the longest ending “" + v1.trail[0].seen.filter(function (w) { return w !== M.START; }).map(dw).join(" ") + "” and answers “" + tok(v1.answer).map(dw).join(" ") + "”: the time of a different place, because it only matches words at the end."));
         el.appendChild(chatList());
         el.appendChild(h("p", { text: "A real LLM learns how to decide how much each word should count (its attention), so it can learn that words like “bank” matter here. Toy model v2 shows the idea with numbers you can work out by hand." }));
         el.appendChild(h("p", { class: "small muted", text: "Toy v2 is only a cartoon of how a model can weigh some words more than others. It still needs the exact same words: it can\u2019t link \u201chours\u201d with \u201copen\u201d. A real model keeps no chats and uses no points table; it learned a huge number of numbers (weights) during training." }));
@@ -736,12 +737,12 @@
         chain(el, [
           { q: "Chat 1 (“" + cap(shop.q) + "?”) shares " + shop.shared.map(dw).join(", ") + ". Its score?", key: String(shop.score), options: [8, 6, 4, 12].map(function (n) { return { value: String(n), label: String(n) }; }), right: shop.shared.map(dw).join(" + ") + " = " + shop.shared.map(function (w) { return rMean.words.filter(function (y) { return y.word === w; })[0].points; }).join(" + ") + " = " + shop.score + ". “The” adds 0.", wrong: "Add the points of the shared words; “the” = 0." },
           { q: "Which chat gets the most say?", key: String(bank.index), oneCol: true, options: [0, 4, 3, 7].map(function (i) { return { value: String(i), label: "Chat " + (i + 1) + ": “" + cap(chats[i][0]) + "?”" }; }),
-            right: "Chat " + (bank.index + 1) + ": only “bank” is shared, but it is worth " + bank.score + ", more than any other chat. The rare, important word beats many common words.", wrong: "Add up each chat's points. Which total is biggest?" },
+            right: "Chat " + (bank.index + 1) + ": only “bank” scores (“the” is worth 0), but it is worth " + bank.score + ", more than any other chat. The rare, important word beats many common words.", wrong: "Add up each chat's points. Which total is biggest?" },
           function (next) {
             var n = h("div", { class: "stack" }, h("p", { text: "All the scores:" }), scoreList(rMean),
               h("p", {}, "Another question: ", h("b", { text: "“" + cap(LD.most) + "?”" }), " No chat is about the pool's owner."));
             n.appendChild(practice({ q: "Which chat gets the most say, and is its answer right?", key: "made", oneCol: true,
-              options: [{ value: "made", label: "Chat " + (rMost.topChat.index + 1) + " (“" + cap(rMost.topChat.q) + "?”): its answer “" + cap(rMost.topChat.a) + "” is made up for the pool" }, { value: "sup", label: "Chat 3 (“" + cap(chats[2][0]) + "?”): it's about the pool, so its answer is right" }],
+              options: [{ value: "made", label: "Chat " + (rMost.topChat.index + 1) + " (“" + cap(rMost.topChat.q) + "?”): its answer “" + cap(rMost.topChat.a) + "” is made up for the pool" }, { value: "sup", label: "Chat " + (poolChat.index + 1) + " (“" + cap(poolChat.q) + "?”): it's about the pool, so its answer is right" }],
               right: "“Who” and “owns” are rare (8 points each), so chat " + (rMost.topChat.index + 1) + " scores " + rMost.topChat.score + ". The answer “" + cap(rMost.topChat.a) + "” is made up: toy v2, like a real model, can still sound sure and be wrong.",
               wrong: "Work out the scores: who and owns are in 1 chat each." }, next));
             return n;

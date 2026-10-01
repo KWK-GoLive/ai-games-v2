@@ -42,7 +42,9 @@
         [top].concat(others).forEach(function (x) { lines.push(scoreLine(x)); });
         var mostShared = Math.max.apply(null, r.rows.map(function (x) { return x.shared.length; }));
         lines.push("Chat " + (top.index + 1) + " has the most points, so its answer “" + ds(top.a) + "” gets the biggest share." + (top.shared.length < mostShared
-          ? " Another chat shares more words, but they are common ones: a rare word counts more." : " It shares the most words, and they are worth the most points."));
+          ? " Another chat shares more words, but they are common ones: a rare word counts more."
+          : r.rows.filter(function (x) { return x.shared.length === mostShared; }).length > 1 ? " Other chats share as many words, but its words are worth more points."
+          : " It shares the most words, and they are worth the most points."));
         return { frac: String(a) === key ? 1 : 0, explain: lines };
       },
       sample: function (rr) { return pick(opts, rr).value; } };
@@ -59,35 +61,51 @@
     D.sets.concat(D.final.sets).forEach(function (s) { s.ask.forEach(function (qn) { T.analyse(s.qa, qn).answers.forEach(function (a) { var p = pctRound(a.pct); if (p >= 5 && p <= 95) KEY_SPREAD.push(p); }); }); });
     return KEY_SPREAD;
   }
+  // the most frequent right answers in the stage pool: "pick the option nearest a common answer" must not work either
+  var COMMON = null;
+  function commonKeys() {
+    if (COMMON) return COMMON;
+    var f = {};
+    sharePool(D.sets).forEach(function (x) { T.analyse(x.set.qa, x.q).answers.slice(0, 2).forEach(function (a) { if (fairAns(a)) { var p = pctRound(a.pct); f[p] = (f[p] || 0) + 1; } }); });
+    COMMON = Object.keys(f).map(Number);   // every possible right answer is a target
+    return COMMON;
+  }
   function shareOptions(r, ans, rng) {
     var right = pctRound(ans.pct), sc = ans.score, spread = keySpread();
     var maxOpt = r.answers.length >= 2 ? 94 : 100;   // with 2+ answers sharing, 95-100% would look silly
-    function ok(c, out) { return c >= 1 && c <= maxOpt && out.every(function (o) { return Math.abs(o - c) >= MIN_GAP; }); }
-    for (var attempt = 0; attempt < 300; attempt++) {
+    var nChats = r.rows.filter(function (x) { return x.score > 0; }).length;
+    // targets a student might aim at without doing the sum: round numbers, and rough estimates from the answer's
+    // own points (x 2, 2.5, 3, 4, or "its points next to about 3 points per other chat")
+    var targets = ANCHORS.concat(commonKeys(), [2 * sc, 2.5 * sc, 3 * sc, 4 * sc, 5 * sc, 6 * sc, 100 * sc / (sc + 3 * Math.max(nChats - 1, 1))]);
+    function ok(c, out) { return c >= 4 && c <= maxOpt && out.every(function (o) { return Math.abs(o - c) >= MIN_GAP; }); }
+    for (var attempt = 0; attempt < 400; attempt++) {
       var nBelow = Math.floor(rng() * 4), out = [right], below = 0, above = 0;
-      // the tempting mistakes first (each only if its side still has room)
-      shuffle([2 * sc, 3 * sc], rng).forEach(function (c) {
-        if (rng() < 0.75 && ok(c, out) && (c < right ? below < nBelow : above < 3 - nBelow)) { out.push(c); if (c < right) below++; else above++; }
-      });
       var lowS = spread.filter(function (v) { return v < right - 2; }), highS = spread.filter(function (v) { return v > right + 2; });
       for (var tries = 0; tries < 300 && (below < nBelow || above < 3 - nBelow); tries++) {
         var wantLow = below < nBelow, list = wantLow ? lowS : highS;
-        var c = list.length ? list[Math.floor(rng() * list.length)] + Math.floor(rng() * 5) - 2 : (wantLow ? right - 5 - Math.floor(rng() * 20) : right + 5 + Math.floor(rng() * 20));
+        var c = list.length && rng() < 0.5 ? list[Math.floor(rng() * list.length)] + Math.floor(rng() * 5) - 2
+          : (wantLow ? right - 5 - Math.floor(rng() * 26) : right + 5 + Math.floor(rng() * 26));
         if ((wantLow ? c < right : c > right) && ok(c, out)) { out.push(c); if (wantLow) below++; else above++; }
       }
-      // avoid "the option nearest a round number (25, 33, 40, 50 ...)" being the key, when a wrong option could be nearer
-      var giveaway = rng() < 0.9 && ANCHORS.some(function (A) {
+      if (out.length !== 4) continue;
+      // reject (mostly) if the key is the option nearest to one of the targets, when another option could be nearer
+      var giveaway = rng() < 0.95 && targets.some(function (A) {
         var d = Math.abs(right - A); return d >= 3 && out.every(function (o) { return o === right || Math.abs(o - A) > d; });
       });
-      if (out.length === 4 && (!giveaway || attempt > 200)) return shuffle(out, rng).map(function (p) { return { value: String(p), label: p + "%" }; });
+      // and if the key is a "round" multiple of 5, at least one wrong option is too ("pick the only round one" fails)
+      if (!giveaway && right % 5 === 0 && rng() < 0.9 && out.filter(function (o) { return o % 5 === 0; }).length === 1) giveaway = true;
+      if (!giveaway || attempt > 300) return shuffle(out, rng).map(function (p) { return { value: String(p), label: p + "%" }; });
     }
     throw new Error("shareOptions: no options for " + right);
   }
+
   // an answer is fair to ask about if its % is at least 10 and not (by chance) within 4 of its points, x 2 or x 3
-  function fairAns(a) { if (!a || a.pct < 10) return false; var p = pctRound(a.pct); return [a.score, 2 * a.score, 3 * a.score].every(function (v) { return Math.abs(v - p) > 4; }); }
+  // (and not within 3 of x 2.5, 4, 5 or 6: the "the total is about 40 / 25 / 20 / 17" guesses)
+  function fairAns(a) { if (!a || a.pct < 10) return false; var p = pctRound(a.pct);
+    return [a.score, 2 * a.score, 3 * a.score].every(function (v) { return Math.abs(v - p) > 4; }) && [2.5 * a.score, 4 * a.score, 5 * a.score, 6 * a.score].every(function (v) { return Math.abs(v - p) > 3; }); }
   function shareItem(set, question, rng, which) {
     var r = T.analyse(set.qa, question);
-    var ans = which === "second" && fairAns(r.answers[1]) ? r.answers[1] : fairAns(r.answers[0]) ? r.answers[0] : r.answers[1];
+    var ans = typeof which === "number" ? r.answers[which] : which === "second" && fairAns(r.answers[1]) ? r.answers[1] : fairAns(r.answers[0]) ? r.answers[0] : r.answers[1];
     var opts = shareOptions(r, ans, rng), key = String(pctRound(ans.pct));
     return { kind: "t2share", chat: set, question: question, limit: 90, key: key, analysis: r, answer: ans.answer, showPoints: true,
       title: "New question: “" + cap(question) + "?” What % chance does the answer “" + ds(ans.answer) + "” get?",
@@ -159,17 +177,28 @@
   var RARE_SHARE = 0.65;
   function pickMost(pool, rng) {
     var rare = pool.filter(function (x) { return x.rare; }), other = pool.filter(function (x) { return !x.rare; });
-    return rare.length && (rng() < RARE_SHARE || !other.length) ? pick(rare, rng) : pick(other, rng);
+    var list = rare.length && (rng() < RARE_SHARE || !other.length) ? rare : other;
+    // spread over the winning chats: group the questions by their winning chat, pick a group, then a question
+    var groups = {};
+    list.forEach(function (x) { var k = T.analyse(x.set.qa, x.q).topChat.q; (groups[k] = groups[k] || []).push(x); });
+    return pick(groups[pick(Object.keys(groups), rng)], rng);
   }
   // the chat order is shuffled for every question, so "pick the highest-numbered chat" is no shortcut
   // (ties are excluded by MARGIN and the share filter, so the order never changes a key)
   function reorder(set, rng) { return { id: set.id, name: set.name, qa: shuffle(set.qa, rng), ask: set.ask }; }
   function stage8(rng) {
     var m = pickMost(mostPool(D.sets), rng);
-    var sp = sharePool(D.sets).filter(function (x) { return x.set !== m.set || x.q !== m.q; }), s = pick(sp, rng);
+    // pick the % question so that every different right answer is equally likely (no common answer to aim at)
+    var pairs = [];
+    sharePool(D.sets).forEach(function (x) { if (x.set === m.set && x.q === m.q) return;
+      T.analyse(x.set.qa, x.q).answers.slice(0, 2).forEach(function (a, ai) { if (fairAns(a)) pairs.push({ set: x.set, q: x.q, ai: ai, p: pctRound(a.pct) }); }); });
+    // distinct right answers, at least 6 apart (two answers close together would make "pick the option near both" a shortcut)
+    var keys = [];
+    pairs.map(function (x) { return x.p; }).sort(function (a, b) { return a - b; }).forEach(function (p) { if (keys.every(function (k) { return Math.abs(k - p) >= 6; })) keys.push(p); });
+    var kp = pick(keys, rng), s = pick(pairs.filter(function (x) { return x.p === kp; }), rng);
     return shuffle([
       mostItem(reorder(m.set, rng), m.q, rng),
-      shareItem(reorder(s.set, rng), s.q, rng, rng() < 0.5 ? "top" : "second"),
+      shareItem(reorder(s.set, rng), s.q, rng, s.ai),
       copyItem(pick(D.copy, rng), rng),
       addonItem(pick(D.addon, rng))
     ], rng).sort(function (a, b) { return ORDER.indexOf(a.kind) - ORDER.indexOf(b.kind); });
@@ -179,8 +208,9 @@
   /* final questions 13-14 */
   function final2(rng) {
     var F = D.final, first, second;
-    if (rng() < 0.5) { var m = pickMost(mostPool(F.sets), rng); first = mostItem(reorder(m.set, rng), m.q, rng); }
-    else { var s = pick(sharePool(F.sets), rng); first = shareItem(reorder(s.set, rng), s.q, rng, rng() < 0.5 ? "top" : "second"); }
+    // question 13 is always "which chat gets the most say": the final's own chats give too few different % answers
+    // for a fair % question (stage 8 tests the % with a larger pool)
+    var m = pickMost(mostPool(F.sets), rng); first = mostItem(reorder(m.set, rng), m.q, rng);
     second = rng() < 0.5 ? copyItem(pick(F.copy, rng), rng) : addonItem(pick(F.addon, rng));
     return [first, second];
   }
