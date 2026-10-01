@@ -200,6 +200,11 @@
       title: "Search the café's files, open the right piece, then reply.",
       hint: "The right piece is titled “" + kp.title + "”. Which of the words would only that piece contain?",
       search: function (words) { return T.fileSearch(words.join(" "), 3); },
+      solve: function () {   // the right moves: 1–2 chip words that put the piece alone on top, open it, reply
+        var c = this.chips, w = null;
+        c.forEach(function (a) { if (!w && T.topIs(T.fileSearch(a, 3), fq.key)) w = [a]; });
+        for (var i = 0; i < c.length && !w; i++) for (var j = i + 1; j < c.length && !w; j++) if (T.topIs(T.fileSearch(c[i] + " " + c[j], 3), fq.key)) w = [c[i], c[j]];
+        return { words: w || [], open: fq.key, answer: key.answer }; },
       grade: function (a) {
         a = a || {};
         var hits = a.words && a.words.length ? T.fileSearch(a.words.join(" "), 3) : [];
@@ -247,6 +252,7 @@
       title: "Search the (made-up) web, open the best page, then reply with the source.",
       hint: "Which query is about " + wq.topic + "? Then open the page from the source the question names (or the official one), and check the date.",
       search: function (q) { return T.webSearch(q, 4); },
+      solve: function () { return { query: key.query, open: wq.key, answer: key.answer }; },
       grade: function (a) {
         a = a || {};
         var hits = a.query ? T.webSearch(a.query, 4) : [];
@@ -303,6 +309,7 @@
       title: "Write the Calculator request, then reply with the result.",
       hint: c.hint,
       run: evalChips,
+      solve: function () { return { tokens: c.solution, reply: String(v) }; },
       grade: function (a) {
         a = a || {};
         var r0 = evalChips(a.tokens), okCalc = r0.ok && Math.abs(r0.value - v) < 0.01, okReply = a.reply === String(v);
@@ -396,6 +403,7 @@
       { value: "silent", label: "Ignore the hidden order and answer Ploy, but don't mention it" }], rng);
     return { kind: "inject", id: q.id, limit: 60, ask: q.ask, files: q.files || null, app: q.app, call: q.call, sentences: q.result, bad: q.bad, acts: acts, finish: q.finish,
       key: { bad: q.bad.slice().sort().join(","), act: "warn" },
+      solve: function () { return { bad: q.bad.slice(), act: "warn" }; },
       title: "Read what the app sent back. Is there an order hidden in it? What do you do?",
       hint: q.hint,
       grade: function (a) {
