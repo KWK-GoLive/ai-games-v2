@@ -81,6 +81,15 @@ Each lesson uses its own 4–6-sentence text, which is different from the stage 
 - `shared/theme-chula.css`: the Chula theme (colours and the Bai Jamjuree font from the lecture deck), loaded last in every page; layout is untouched. The font comes from Google Fonts by a `<link>` in each page; if a network blocks Google Fonts, the pages use the system font (on a network that silently drops the connection, the first paint can wait until the browser gives up). Four small contrast fixes on top of the teacher's file: unread badge #0070c0, Part A/B chip text #005a9c, amber part-marks border, sender names on coloured bubbles at full white. The front-page game numbers keep their orange circles (as in the mockup).
 - `config.js`: `SCOREBOARD_URL`, `BOARD_REFRESH_SECONDS`, `TIME_FACTOR` (1.5 = 50% more time).
 
+## v2.1 preview (`/v21/`): toy model v2
+
+A test copy of Part 1 with **lesson and stage 8 "Meaning brain"** (toy model v2: rare words count more, blended answers, copying from the prompt, lookup is an add-on) and a **14-question final** (13–14 use toy v2). It lives in `v21/` so the live v2.0 pages are untouched:
+
+- `v21/index.html` (preview landing page), `v21/llm/` and `v21/final/` (copies of `llm/` and `final/` with the changes; they load the unchanged shared files from `../../shared/`), `v21/shared/model2.js` (toy v2), `v21/llm/data/toy2.js` (made-up chats, prompts, requests), `v21/llm/js/toy2.js` (stage 8 and final items), `v21/board.html` + `v21/shared/board.js` (board for the preview games only).
+- Game IDs `llm21` (8 stages) and `llmfinal21`; `apps-script/Code.gs` accepts them (paste it and deploy a new version, see Scoreboard).
+- To go back to v2.0 at any time: `VERSION-2.0.md` (GitHub commit 34725ff and the `ai-games-v2.0.zip` snapshot).
+- Tests: `node tests/check-toy2.js` (every toy-v2 key recomputed by a separate implementation over 300 seeds; no overlap between lesson, stage and final data) and `python3 tests/v21-play.py` (lesson 8 and stage 8 at 1100 and 360 px, an official run reaching the llm21 board, the 14-question final, v2.0 unchanged).
+
 ## Teacher mode
 
 Every game page has a **🎓 Teacher** button in the top bar. The code (KWK-TEACH; only its SHA-256 is in `shared/arena.js`) turns on teacher mode in that browser (`localStorage` key `aig-teacher`) until "Leave teacher mode": a menu of every lesson and stage, paused timers, a "Show answer" button on every question (`item.solve()` for the agent items, `item.key` otherwise), and no traffic to the scoreboard (teacher runs are never saved as official or practice runs and never tick the front page). Not real security: it only keeps students from stumbling into it. `tests/teacher-mode.py` checks all 5 pages.
@@ -114,6 +123,7 @@ Load (not measured with a real class): each student sends one small request per 
 
 ## Sources
 
+- v2.1 toy model v2 sources (Vaswani et al., 2017; Olsson et al., 2022; Khandelwal et al., 2020; Lewis et al., 2020): see TEACHING_GUIDE.md, "Sources used in the games", and `literature-report-v21.xlsx`.
 - Brown, T. B., et al. (2020). *Language Models are Few-Shot Learners*. NeurIPS 2020, section 2.1: "All models use a context window of n_ctx = 2048 tokens."
 - Anthropic, *Context windows* (Claude Platform Docs), https://platform.claude.com/docs/en/build-with-claude/context-windows, accessed 28 Sep 2026. It lists Claude Sonnet 5 among the models with a 1M-token context window.
 - Thailand Revenue Department, *Value Added Tax (VAT)* (https://www.rd.go.th/english/6043.html), accessed 28 Sep 2026: "Currently, the rate is 7 percent." This is the only real page in the Agent game's mini-web; the other 16 pages are made up (their sites end in `.example`).
