@@ -69,11 +69,11 @@
     // names), and two wrong options are other words from the prompt, so neither "the capitalised one" nor
     // "the one that is in the prompt" gives the answer away (checked by tests/check-toy2.js)
     copy: [
-      { prompt: "our new teacher is mr korn from the north and our coach is miss dao . today mr", options: ["korn", "miss", "dao", "lucas"] },
+      { prompt: "our new teacher is mr korn from the north and our coach is miss dao from the south . today mr", options: ["korn", "miss", "dao", "lucas"] },
       { prompt: "the wifi password is blue tiger and the door code is red lion for the back gate . i typed red", options: ["lion", "tiger", "red", "sky"] },
       { prompt: "my cat is named sir fluffy because she is soft and my dog is named lady rose . yesterday sir", options: ["fluffy", "lady", "rose", "buttercup"] },
       { prompt: "the band is called the paper moons and the singer is called big sun from korea . tonight big", options: ["sun", "moons", "band", "rockets"] },
-      { prompt: "our team is red falcons from room five and their team is blue sharks . go red", options: ["falcons", "sharks", "team", "car"] },
+      { prompt: "our team is red falcons from room five and their team is blue sharks from room six . go red", options: ["falcons", "sharks", "team", "car"] },
       { prompt: "my brother has a dog called captain biscuit who loves the beach and a parrot called pepper . i walked captain", options: ["biscuit", "brother", "pepper", "rex"] }
     ],
     // add-on requests: questions and commands on both sides, and "my/our/today" on both sides, so the form of the
@@ -143,7 +143,7 @@
             "who runs the night show", "what are the food court hours", "how much is grilled fish", "where is gate b", "who cooks the grilled fish"] }
       ],
       copy: [
-        { prompt: "the new robot is called zibo max in our lab and the old one is called rolo . we asked zibo", options: ["max", "robot", "rolo", "tim"] },
+        { prompt: "the new robot is called zibo max in our lab and the old one is called rolo in the store room . we asked zibo", options: ["max", "robot", "rolo", "tim"] },
         { prompt: "on monday we cook fried rice with egg and on friday we cook green curry . today we cook fried", options: ["rice", "friday", "curry", "pie"] },
         { prompt: "our class mascots are a turtle called tiny joe and a frog called big sam from the pond . go big", options: ["sam", "joe", "turtle", "boss"] },
         { prompt: "my phone password is lucky seven this month and my bike lock is happy nine . i entered lucky", options: ["seven", "lock", "nine", "ten"] },
@@ -160,6 +160,8 @@
         { text: "Write a short report of yesterday's sales from our sales file.", needs: true, why: "A private file from yesterday: it needs a tool that opens it before it can write." },
         { text: "Give me today's top three headlines.", needs: true, why: "Today's headlines are new information: it needs a web search." },
         { text: "Show me how to fold a paper plane.", needs: false, why: "Common how-to knowledge from its training text: no lookup needed." },
+        { text: "Find a cheap hotel for tonight.", needs: true, why: "Hotel prices and free rooms change: it needs a web search." },
+        { text: "Explain the rules of chess to beginners who have never played before.", needs: false, why: "Common knowledge from its training text: no lookup needed." },
         { text: "Write a short poem for tonight's class party.", needs: false, why: "Writing a poem uses learned patterns: no lookup needed, even though it says \u201ctonight\u201d." },
         { text: "Find a word that means \u201chappy\u201d.", needs: false, why: "Common word knowledge: no lookup needed, even though the request says \u201cfind\u201d." },
         { text: "Give three ideas for a birthday party theme.", needs: false, why: "New ideas from learned patterns: a plain model can do it." },
