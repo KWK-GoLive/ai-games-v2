@@ -1,0 +1,4 @@
+https://support.claude.com/en/articles/11817273-use-claude-s-chat-search-and-memory-to-build-on-previous-context (Claude Help Center, "Use Claude's chat search and memory to build on previous context"; vendor documentation), accessed 16 Oct 2026 in Chrome. Excerpts copied from the page text.
+Claude can now generate memory based on your chat history. With the addition of memory, Claude transforms from a stateless chat interface into a knowledgeable collaborator that builds understanding over time.
+Memory summary
+Claude will automatically summarize your conversations and create a synthesis of key insights across your chat history (not including chats in projects). This synthesis is updated every 24 hours and provides context for every new standalone conversation.
