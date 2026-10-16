@@ -691,7 +691,7 @@
     }
     function scoreList(r) {
       return h("div", { class: "stack" }, r.rows.filter(function (x) { return x.score > 0; }).map(function (x) {
-        return h("div", { class: "small" + (x === r.topChat ? " kh-in" : "") }, "Chat " + (x.index + 1) + ": " + x.shared.map(dw).join(" + ") + " → " + x.shared.map(function (w) { return r.words.filter(function (y) { return y.word === w; })[0].points; }).join(" + ") + " = " + x.score);
+        return h("div", { class: "small" + (x === r.topChat ? " kh-in" : "") }, h("b", { text: "Chat " + (x.index + 1) }), " (Q: " + cap(x.q) + "?  A: " + cap(x.a) + "): " + x.shared.map(dw).join(" + ") + " → " + x.shared.map(function (w) { return r.words.filter(function (y) { return y.word === w; })[0].points; }).join(" + ") + " = " + x.score);
       }));
     }
     function sharesOf(r) { // whole % that add up to 100 (largest remainder)
@@ -751,6 +751,7 @@
       } },
       { title: "Blended, not copied", locked: true, render: function (el, unlock) {
         el.appendChild(h("p", {}, "Toy v1 built its answer word by word from one matching ending. Toy v2 lets every chat with points have a share: ", h("b", { text: "an answer's % = its chats' points \u00f7 all the points" }), ". Question: ", h("b", { text: "\u201c" + cap(LD.share) + "?\u201d" })));
+        el.appendChild(chatList(LD.share));
         el.appendChild(pointsCards(rShare));
         el.appendChild(scoreList(rShare));
         function bar() {
