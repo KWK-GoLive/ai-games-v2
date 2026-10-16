@@ -1,0 +1,13 @@
+/* AI games v2.1 PREVIEW · Be the Agent: the context window (lesson/stage 4) and the two-phone chat */
+@media (min-width: 741px) { .ph-two .ph-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.ph-wc { display: block; margin-top: 3px; font-size: .72rem; font-weight: 700; opacity: .75; }
+.b.ph-out, .b.right.ph-out, .b.left.ph-out { background: #f1f2f4 !important; color: #8a8f98 !important; opacity: .8; outline: 2px dashed #b7bcc4; outline-offset: 1px; }
+.b.ph-out .b-from, .b.ph-out .ph-wc { color: #8a8f98; }
+.b.ph-wrong { outline: 3px solid #d4380d; }
+.ph-cut { margin: 2px 0; padding: 3px 6px; border-top: 3px dashed #d4380d; color: #a8320b; font-size: .75rem; font-weight: 700; text-align: center; }
+.ph-cut.top { border-top: 0; border-bottom: 3px dashed #d4380d; }
+.cw-meter { display: grid; gap: 4px; }
+.cw-bar { height: 14px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--line); overflow: hidden; }
+.cw-bar > span { display: block; height: 100%; background: var(--accent); }
+.cw-bar.over > span { background: #d4380d; }
+.fix-case { border-left: 4px solid var(--accent); padding: 8px 12px; background: var(--surface-2); border-radius: 10px; }
