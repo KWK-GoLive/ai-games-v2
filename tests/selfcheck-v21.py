@@ -19,7 +19,7 @@ out.append(f"## Evidence quotes: {len(res)} checked / {len(ev)} rows (exact subs
 out += [f"- row {a}: {b}: **{c}**" for a, b, c in res]
 out.append(f"\n## Every Evidence row points to a Sources row: {sum(1 for r in ev if r[3] in srcs)} / {len(ev)}")
 g = open(os.path.join(ROOT, "TEACHING_GUIDE.md"), encoding="utf-8").read()
-sec = g[g.index("## v2.1 preview"):g.index("## Sources used in the games")]
+sec = g[g.index("## v2.1 preview"):g.index("## v2.1 preview: Be the Agent")]   # the toy-v2 section only (Be the Agent v2.1: selfcheck-agent21.py)
 say = sec[sec.index("**What to say about it"):sec.index("**Time")]
 quotes = [m for line in say.splitlines() for m in re.findall(r'"([^"]+)"', line)]
 src_quotes = [q for q in quotes if len(q) >= 25]   # skip short labels such as section names

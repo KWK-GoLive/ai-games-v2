@@ -1,0 +1,208 @@
+"""
+AI games v2.1 PREVIEW — Be the Agent browser tests (Playwright + Chromium).   python3 tests/agent21-play.py
+Plays the 4 lessons (replays + practice) and the 4 stages of Be the Agent Arena v2.1 (v21/agent/) by clicking the real buttons,
+then the v2.1 Agent Arena's 10 steps (v21/agent-final/). Also checks the context-window marks (greyed messages, cut line),
+the case-3 order (the safer Calculator step comes before the reply), and that the v2.0 pages still load. Checks: every item can be finished with full marks; the 3-phone rule (every message
+is in the Model phone once and in exactly one other phone); no sideways scroll at 390 and 1100 px (playthrough.py and touch.py cover other widths and iPhone/iPad); no page errors;
+a real .xlsx/.docx/.csv is offered by the File maker. SHOTS=dir saves screenshots.
+"""
+import functools, http.server, json, os, socketserver, sys, threading
+from playwright.sync_api import sync_playwright
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+SHOTS = os.environ.get("SHOTS")
+class Quiet(http.server.SimpleHTTPRequestHandler):
+    def log_message(self, *a): pass
+httpd = socketserver.ThreadingTCPServer(("127.0.0.1", 0), functools.partial(Quiet, directory=ROOT))
+threading.Thread(target=httpd.serve_forever, daemon=True).start()
+BASE = f"http://127.0.0.1:{httpd.server_address[1]}"
+fails = []
+def check(c, m):
+    if not c: fails.append(m); print("  FAIL ", m, flush=True)
+def shot(pg, name):
+    if SHOTS: pg.screenshot(path=os.path.join(SHOTS, name + ".png"), full_page=True)
+def no_hscroll(pg, what):
+    w = pg.evaluate("document.documentElement.scrollWidth - document.documentElement.clientWidth")
+    check(w <= 1, f"{what}: no sideways scroll (overflow {w}px)")
+def phone_rule(pg, what):
+    # every message is in exactly 2 phones: right in the sender's, left in the receiver's.
+    # So: Model-phone LEFT bubbles = Human RIGHT + Apps RIGHT, and Model-phone RIGHT bubbles = Human LEFT + Apps LEFT,
+    # and each side's bubbles have the sender's colour class (checked on the last phones widget on the page).
+    r = pg.evaluate("""(() => { const all = [...document.querySelectorAll('.phones')]; const w = all[all.length - 1];
+        const n = (s) => w.querySelectorAll(s).length;
+        return { hr: n('.ph-human .b.right'), hl: n('.ph-human .b.left'), ml: n('.ph-model .b.left'), mr: n('.ph-model .b.right'),
+                 ar: n('.ph-apps .b.right'), al: n('.ph-apps .b.left'),
+                 humanFromModel: n('.ph-human .b.left.c-model'), modelToHuman: n('.ph-model .b.right.c-model') - n('.ph-apps .b.left'),
+                 appsLeftAreModel: n('.ph-apps .b.left') === n('.ph-apps .b.left.c-model'), appsRightAreApps: n('.ph-apps .b.right') === n('.ph-apps .b.right.c-app'),
+                 humanRightIsHuman: n('.ph-human .b.right') === n('.ph-human .b.right.c-human') }; })()""")
+    ok = (r["ml"] == r["hr"] + r["ar"] and r["mr"] == r["hl"] + r["al"] and r["humanFromModel"] == r["modelToHuman"]
+          and r["appsLeftAreModel"] and r["appsRightAreApps"] and r["humanRightIsHuman"] and r["ml"] + r["mr"] > 0)
+    check(ok, f"{what}: 3-phone rule, sides and senders ({r})")
+def mv(pg, n): return pg.locator(".move").nth(n)
+def click_val(loc, v):
+    loc.locator(f'.choice[data-value="{v}"]').first.click()
+
+SEEN = {}
+def solve_item(pg, what):
+    it = pg.evaluate("""(() => { const it = window.AGENT_LAST_ITEM; const o = { kind: it.kind, key: it.key };
+      if (it.kind === 'filesearch') { let best = null; const c = it.chips;
+        const top = r => r.length && r[0].piece.id === it.key.piece && (r.length < 2 || r[1].score < r[0].score);
+        for (const a of c) if (!best && top(it.search([a]))) best = [a];
+        for (let i = 0; i < c.length && !best; i++) for (let j = i + 1; j < c.length && !best; j++) if (top(it.search([c[i], c[j]]))) best = [c[i], c[j]];
+        o.words = best; }
+      if (it.kind === 'websearch') o.query = it.key.query;
+      if (it.kind === 'calc') o.solution = it.solution;
+      if (it.kind === 'inject') o.bad = it.bad;
+      o.files = (it.files || []).length; o.made = it.kind === 'maker' || !!it.madeFile;
+      return o; })()""")
+    # the café's files are in the shared folder (a set-up note in the Model phone); Ploy attaches only a NEW file
+    w = "(() => { const all = [...document.querySelectorAll('.phones')]; return all[all.length - 1]; })()"
+    if it["kind"] in ("window", "why", "fix"): fol = True
+    else: fol = pg.evaluate(f"[...{w}.querySelectorAll('.ph-model .ph-note')].some(n => /shared folder/i.test(n.textContent))")
+    check(fol, f"{what}: the shared-folder set-up note is in the Model phone")
+    att = [] if it["kind"] in ("window", "why", "fix") else pg.evaluate(f"[...{w}.querySelectorAll('.ph-human .b.right .b-file')].map(e => e.textContent)")
+    check(not any(x for x in att if any(f in x for f in ("Moonbean_staff_handbook", "Moonbean_menu", "Supplier_letter", "moonbean_sales"))), f"{what}: Ploy doesn't attach files that are in the shared folder ({att})")
+    k, key = it["kind"], it["key"]
+    if k == "toolpick":
+        click_val(mv(pg, 0), key["tool"])
+    elif k in ("window", "why", "fix"):
+        click_val(mv(pg, 0), key)
+    elif k == "filesearch":
+        for w in it["words"]: click_val(mv(pg, 0), w)
+        mv(pg, 0).locator("button:has-text('Search')").click(); pg.wait_for_timeout(60)
+        click_val(mv(pg, 1), key["piece"]); pg.wait_for_timeout(60); click_val(mv(pg, 2), key["answer"])
+    elif k == "websearch":
+        click_val(mv(pg, 0), it["query"]); pg.wait_for_timeout(60); click_val(mv(pg, 1), key["page"]); pg.wait_for_timeout(60); click_val(mv(pg, 2), key["answer"])
+    elif k == "calc":
+        for t in it["solution"]: mv(pg, 0).get_by_role("button", name=t, exact=True).first.click()
+        mv(pg, 0).locator("button:has-text('Send to')").click(); pg.wait_for_timeout(60); click_val(mv(pg, 1), key["reply"])
+    elif k == "maker":
+        for v in (key["type"], key["name"], key["content"]): click_val(mv(pg, 0), v)
+        mv(pg, 0).locator("button:has-text('Send to')").click(); pg.wait_for_timeout(80)
+        check(pg.locator(".ph-model .v-file button:has-text('Download')").count() >= 1, f"{what}: the made file can be downloaded")
+        with pg.expect_download() as d: pg.locator(".ph-model .v-file button:has-text('Download')").first.click()
+        name = d.value.suggested_filename
+        check(name.endswith("." + key["type"]), f"{what}: downloaded {name}")
+        click_val(mv(pg, 1), "ok")
+    elif k == "inject":
+        for b in it["bad"]: click_val(mv(pg, 0), b)
+        mv(pg, 0).locator("button:has-text('Done tapping')").click(); pg.wait_for_timeout(60); click_val(mv(pg, 1), "warn")
+    elif k == "permission":
+        click_val(mv(pg, 0), key)
+    pg.wait_for_timeout(80)
+    if k == "fix":
+        SEEN.setdefault("practice" if "practice" in what else "test", set()).add(pg.evaluate("window.AGENT_LAST_ITEM.text.toLowerCase()")); return
+    phone_rule(pg, what)
+    if k == "window":
+        w = "(() => { const all = [...document.querySelectorAll('.phones')]; return all[all.length - 1]; })()"
+        n = pg.evaluate(f"[{w}.querySelectorAll('.ph-model .b.ph-out').length, {w}.querySelectorAll('.ph-model .ph-cut').length, {w}.querySelectorAll('.ph-human .b.ph-out').length, {w}.querySelectorAll('.ph-model .ph-wc').length, {w}.querySelectorAll('.ph-apps').length]")
+        check(n[0] == key and n[1] == (1 if key > 0 else 0) and n[2] == 0 and n[3] >= 1 and n[4] == 0, f"{what}: after the answer, the {key} oldest Model-phone messages are greyed with one cut line, Ploy's phone is not, counts shown, no Apps phone ({n})")
+    # the file the app opens is named on the model's request, in the Model phone (right) and the Apps phone (left)
+    uses = pg.evaluate("""(() => { const it = window.AGENT_LAST_ITEM; return (it.kind === 'calc' && (it.solution || []).some(t => /SUM/.test(t))) || it.kind === 'filesearch' || (it.kind === 'maker' && !/memo/i.test(it.key.content))
+      || (it.kind === 'toolpick' && (it.tool === 'files' || it.tool === 'maker' || /SUM/.test(it.call || ''))) || (it.kind === 'inject' && it.app === 'files'); })()""")
+    if uses:
+        w = "(() => { const all = [...document.querySelectorAll('.phones')]; return all[all.length - 1]; })()"
+        n = pg.evaluate(f"[{w}.querySelectorAll('.ph-model .b.right .b-open').length, {w}.querySelectorAll('.ph-apps .b.left .b-open').length]")
+        check(n[0] >= 1 and n[1] >= 1, f"{what}: the file the app opens is named on the model's request in both phones ({n})")
+    SEEN.setdefault("practice" if "practice" in what else "test", set()).add(pg.evaluate("(window.AGENT_LAST_ITEM.ask || window.AGENT_LAST_ITEM.plan || (window.AGENT_LAST_ITEM.msgs || []).map(m => m.text).join(' ') || '').toLowerCase()"))   # compared by the question text
+    if it["made"] and (k == "maker" or "Done" in (pg.evaluate("(() => { const b = [...document.querySelectorAll('.ph-human .b.left')]; return b.length ? b[b.length - 1].textContent : ''; })()") or "")):
+        check(pg.evaluate("(() => { const all = [...document.querySelectorAll('.phones')]; const w = all[all.length - 1]; return w.querySelectorAll('.ph-human .b.left .v-file').length; })()") >= 1, f"{what}: the made file arrives in Ploy's phone with the reply")
+
+def do_lesson(pg, n):
+    for i in range(10):
+        pg.wait_for_timeout(80)
+        while pg.locator("button:has-text('Show all'):not([disabled])").count():
+            pg.locator("button:has-text('Show all'):not([disabled])").first.click(); pg.wait_for_timeout(60)
+        if n == 4 and i == 1:
+            while pg.locator("button:has-text('Next message'):not([disabled])").count():
+                pg.locator("button:has-text('Next message'):not([disabled])").first.click(); pg.wait_for_timeout(30)
+        if pg.locator(".move").count() and not pg.locator(".feedback.good").count():
+            solve_item(pg, f"lesson {n} practice")
+            check(pg.locator(".feedback.good").count() == 1, f"lesson {n} practice solved with full marks")
+        no_hscroll(pg, f"lesson {n} step {i+1} @{pg.viewport_size['width']}")
+        if n == 1 and i == 3:   # real case 3: the safer Calculator step comes before the recorded reply
+            order = pg.evaluate("[...document.querySelectorAll('.ph-model .b')].map(b => b.classList.contains('b-safer') ? 'safer' : b.classList.contains('c-model') && b.classList.contains('right') && /VAT rate is currently/.test(b.textContent) ? 'reply' : '').filter(Boolean)")
+            check(order == ["safer", "safer", "reply"], f"lesson 1 case 3: safer Calculator steps before the reply ({order})")
+        if n == 4 and i == 1:
+            n_out = pg.evaluate("document.querySelectorAll('.ph-model .b.ph-out').length")
+            check(n_out == 4 and pg.locator(".ph-cut").count() == 1 and "Dear owner" in pg.locator(".ph-human").first.inner_text(), f"lesson 4 example: 4 messages slid out, one cut line ({n_out})")
+        if n in (1, 4) and i in (1, 3): shot(pg, f"agent21-lesson{n}-step{i+1}-{pg.viewport_size['width']}")
+        nx = pg.locator("button:has-text('Next →'), button:has-text('Start stage')").first
+        check(nx.is_enabled(), f"lesson {n} step {i+1} unlocks")
+        if not nx.is_enabled(): return
+        t = nx.inner_text(); nx.click()
+        if "Start stage" in t: return
+
+CONFIG = 'window.AIG_CONFIG={SCOREBOARD_URL:"",TIME_FACTOR:1.5};'
+def config_route(ctx):
+    ctx.route("**/config.js", lambda r: r.fulfill(status=200, content_type="application/javascript", body=CONFIG))
+
+def play(ctx, label, W, per_item=None):
+    """Plays all 7 lessons, all 7 stages and the Agent Arena in this browser context. per_item(pg, what) runs extra checks."""
+    pg = ctx.new_page(); errs = []; pg.on("pageerror", lambda e: errs.append(str(e)))
+    pg.goto(BASE + "/v21/agent/index.html?test=1"); pg.wait_for_timeout(300)
+    pg.fill("#nick", "t" + str(W)); pg.click("button:has-text('Start my run')"); pg.wait_for_timeout(300)
+    check(pg.locator("text=v2.1").count() >= 1, f"@{label} the v2.1 page says it is the preview")
+    for sno in range(1, 5):
+        do_lesson(pg, sno)
+        pg.click("button:has-text('Start stage')"); pg.wait_for_timeout(120)
+        n = 0
+        while True:
+            n += 1
+            solve_item(pg, f"@{label} stage {sno} item {n}")
+            no_hscroll(pg, f"@{label} stage {sno} item {n}")
+            if n <= 3: shot(pg, f"agent21-stage{sno}-item{n}-{label}")
+            if per_item: per_item(pg, f"@{label} stage {sno} item {n}")
+            card = pg.locator(".result-card")
+            check(card.count() == 1 and "Right" in card.inner_text(), f"@{label} stage {sno} item {n} full marks: " + (card.inner_text()[:120] if card.count() else "no result"))
+            b = card.locator("button").first; t = b.inner_text(); b.click(); pg.wait_for_timeout(100)
+            if "Next item" not in t: break
+        nb = pg.locator("button:has-text('Next: lesson'), button:has-text('See my results')")
+        if nb.count(): nb.first.click(); pg.wait_for_timeout(150)
+    check(pg.locator(".big-points").count() == 1, f"@{label} results screen")
+    # ---------- Agent Arena ----------
+    pg.goto(BASE + "/v21/agent-final/index.html?test=1"); pg.wait_for_timeout(300)
+    pg.locator("button:has-text('Start my run'):visible").first.click(); pg.wait_for_timeout(300); pg.click("button:has-text('Start stage')"); pg.wait_for_timeout(150)
+    for sidx in range(10):
+        st = pg.evaluate("(() => { const s = window.AGENT_STEP; return { kind: s.kind, key: s.key, id: s.id, window: !!s.window }; })()")
+        m = pg.locator(".move").last
+        if st["window"]:
+            o = pg.evaluate("[document.querySelectorAll('.ph-model .b.ph-out').length, document.querySelectorAll('.ph-model .b').length, document.querySelectorAll('.ph-cut').length, /Khun Somsak/.test(document.querySelector('.ph-model .b.ph-out') ? document.querySelector('.ph-model .b.ph-out').textContent : '')]")
+            check(o[0] == 1 and o[1] > 10 and o[2] == 1 and o[3], f"@{label} arena window step: only Ploy's first message (with Khun Somsak) is greyed ({o})")
+            shot(pg, f"agent21-arena-window-{label}")
+        click_val(m, st["key"])
+        pg.wait_for_timeout(80)
+        phone_rule(pg, f"@{label} arena step {sidx+1}")
+        if sidx in (4, 7, 9): no_hscroll(pg, f"@{label} arena step {sidx+1}"); shot(pg, f"agent-arena-step{sidx+1}-{label}")
+        if per_item: per_item(pg, f"@{label} arena step {sidx+1}")
+        if st["id"] == "reply": check(pg.locator(".ph-human .b.left .v-file").count() >= 1, f"@{label} arena: the memo file arrives in Ploy's phone with the final reply")
+        if sidx == 0: check(pg.locator(".ph-human .b.right .b-file").count() == 0 and pg.locator(".ph-model .ph-note:has-text('Shared folder')").count() >= 1, f"@{label} arena: the task comes with the shared-folder note, no attachments")
+        card = pg.locator(".result-card")
+        check("Right" in card.inner_text(), f"@{label} arena step {sidx+1} ({st['id']}) full marks")
+        card.locator("button").first.click(); pg.wait_for_timeout(100)
+    nb = pg.locator("button:has-text('See my results')")
+    if nb.count(): nb.first.click(); pg.wait_for_timeout(150)
+    check(pg.locator(".big-points").count() == 1, f"@{label} arena results")
+    check(not errs, f"@{label} no page errors: " + "; ".join(errs[:3]))
+
+def main():
+    with sync_playwright() as p:
+        br = p.chromium.launch()
+        ctx = br.new_context(viewport={"width": 1100, "height": 900}); config_route(ctx); pg = ctx.new_page(); errs = []; pg.on("pageerror", lambda e: errs.append(str(e)))
+        for u in ("/agent/index.html", "/agent-final/index.html"):
+            pg.goto(BASE + u); pg.wait_for_timeout(300)
+            check(pg.locator("button:has-text('Start my run')").count() >= 1 and not errs, f"v2.0 {u} still loads ({errs[:2]})")
+        ctx.close()
+        for width in (1100, 390):
+            ctx = br.new_context(viewport={"width": width, "height": 900}, accept_downloads=True)
+            config_route(ctx)
+            play(ctx, str(width), width)
+            ctx.close()
+        br.close()
+    httpd.shutdown()
+    both = SEEN.get("practice", set()) & SEEN.get("test", set())
+    check(len(SEEN.get("practice", set())) >= 6 and not both, f"no lesson practice question was also a stage question in this run ({sorted(both)})")
+    print(f"{len(fails)} check(s) FAILED" if fails else "All agent browser checks passed")
+    sys.exit(1 if fails else 0)
+
+if __name__ == "__main__":
+    main()

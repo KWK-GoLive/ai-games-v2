@@ -146,7 +146,7 @@ with sync_playwright() as p:
         page.evaluate("ARENA_TEST.submit(ARENA_TEST.item.key)"); page.wait_for_timeout(100)
         b = page.locator(".result-card button").first; t = b.inner_text(); b.click()
         if "Next item" not in t: break
-    check(len(seen) == 14 and seen[12] in ("t2most", "t2share") and seen[13] in ("t2copy", "t2addon"), f"v2.1 final: 14 questions, 13-14 toy v2 ({seen})")
+    check(len(seen) == 14 and seen[12] == "t2most" and seen[13] in ("t2copy", "t2addon"), f"v2.1 final: 14 questions, 13-14 toy v2 ({seen})")
     check(not page.errors, f"v2.1 final: no page errors {page.errors[:3]}")
     ctx.close()
     # ---------- the preview board and landing page ----------

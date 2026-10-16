@@ -86,6 +86,14 @@ check(post({ game: "llmfinal21", nickname: "Pv", runId: "pf21", stage: 1, items:
 var b21 = S.doGet({ action: "board", game: "llm21", classCode: "SEC1" });
 check(b21.players[0].perStage.length === 8 && b21.players[0].perStage[7] === 250, "llm21 board has 8 stage columns: " + JSON.stringify(b21.players[0]));
 check(S.doGet({ action: "board", game: "llm2", classCode: "SEC1" }).players.every(function (p) { return p.nickname !== "Pv"; }), "llm21 rows never appear on the llm2 board");
+// v2.1 preview games: agent21 (4 stages, Be the Agent with 4 lessons), agentfinal21 (1 stage, 10 steps)
+check(post({ game: "agent21", nickname: "Pa", runId: "a21", stage: 4, points: 300 }).ok, "agent21 accepts stage 4");
+check(post({ game: "agent21", nickname: "Pa", runId: "a21", stage: 5 }).fatal === true, "agent21 refuses stage 5");
+check(post({ game: "agentfinal21", nickname: "Pa", runId: "af21", stage: 1, points: 900 }).ok, "agentfinal21 accepts stage 1");
+check(post({ game: "agentfinal21", nickname: "Pa", runId: "af21", stage: 2 }).fatal === true, "agentfinal21 refuses stage 2");
+var a21 = S.doGet({ action: "board", game: "agent21", classCode: "SEC1" });
+check(a21.players[0].perStage.length === 4 && a21.players[0].perStage[3] === 300, "agent21 board has 4 stage columns: " + JSON.stringify(a21.players[0]));
+check(S.doGet({ action: "board", game: "agent2", classCode: "SEC1" }).players.every(function (p) { return p.nickname !== "Pa"; }), "agent21 rows never appear on the agent2 board");
 post({ game: "llm2", nickname: "Vi", runId: "v1", stage: 1, points: 100 });
 var b7 = S.doGet({ action: "board", game: "llm2", classCode: "SEC1" });
 check(b7.players[0].perStage.length === 7 && b7.players[0].perStage[6] === 300 && b7.players[0].perStage[0] === 100 && b7.players[0].points === 400, "llm2 board has 7 stage columns: " + JSON.stringify(b7.players[0]));

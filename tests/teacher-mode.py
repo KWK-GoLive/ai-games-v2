@@ -1,4 +1,4 @@
-"""Teacher mode on all 5 game pages: the 🎓 button and code (wrong code refused, KWK-TEACH unlocks), jump to any
+"""Teacher mode on all 5 game pages (and the 2 v2.1 Be the Agent preview pages): the 🎓 button and code (wrong code refused, KWK-TEACH unlocks), jump to any
 lesson/stage, paused timer, Show answer (right for the item), NOTHING sent to the scoreboard, the student's saved run
 untouched, stays on after a reload, Leave works.   python3 tests/teacher-mode.py"""
 import http.server, threading, functools, os, sys, json
@@ -12,7 +12,8 @@ fails = []
 def check(c, m):
     if not c: fails.append(m); print("  FAIL ", m, flush=True)
 PAGES = [("warmup/index.html", "warmup", False), ("llm/index.html", "llm2", True), ("final/index.html", "llmfinal", False),
-         ("agent/index.html", "agent2", True), ("agent-final/index.html", "agentfinal", False)]
+         ("agent/index.html", "agent2", True), ("agent-final/index.html", "agentfinal", False),
+         ("v21/agent/index.html", "agent21", True), ("v21/agent-final/index.html", "agentfinal21", False)]   # v2.1 preview: Be the Agent with 4 lessons
 CFG = 'window.AIG_CONFIG={SCOREBOARD_URL:"https://scoreboard.example/exec",BOARD_REFRESH_SECONDS:3,TIME_FACTOR:1.5};'
 with sync_playwright() as p:
     br = p.chromium.launch()
