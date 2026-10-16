@@ -121,5 +121,15 @@ All round-6 fixes present; lesson 8 recomputed by hand; all suites pass (also wi
 | 12 | Minor | "who rides the red path"; 1%/3% options | Question removed; options are now at least 4%. ("how much is a duck ride" kept: it reads acceptably.) |
 | 13 | Minor | Repeat players can learn the stage-8 % answers | Noted in the guide. |
 
+## Round 8 (full review, requested by the teacher: "Another round")
+No Critical or Major findings (clean round at the Standard threshold). All 13 round-7 fixes verified. The reviewer recomputed every most-say question and the lesson 8 numbers with its own Python implementation, checked 43,282 explanation lines over 3,000 seeds (0 mismatches), re-checked all 8 literature quotes, v2.0 isolation and the 360 px layout. All suites pass (also with 4000 seeds).
+
+| # | Severity | Finding | Fix (unreviewed: round 8 was the last round) |
+|---|---|---|---|
+| 1 | Minor | Copy: after the round-7 fix the wrong prompt words often sat before "and" or the full stop, so dropping them guessed right 58% (stage) / 50% (final) | Three prompts now put a wrong option mid-sentence ("miss dao from the south", "blue sharks from room six", "rolo in the store room"). |
+| 2 | Minor | Final add-on: "contains 'a' → plain" right 11 of 13 (85%) | Two requests added: "Find a cheap hotel for tonight." (lookup) and "Explain the rules of chess to beginners who have never played before." (plain). Now 73% (stage 65%); length rule still ≤ 62% (tested). |
+| 3 | Minor | Guide said "about 10 different right answers" for stage-8 % questions | "about 7". |
+| 4 | Minor | `tests/v21-play.py` still accepted a % question as final question 13 | Now requires a "which chat" question. |
+
 ## Unreviewed fixes
-All round-7 fixes above. After them: check-toy2 (64,125 checks; 169,077 with SEEDS=4000), check-data, check-backend, selfcheck-v21 (clean), v21-play and playthrough pass.
+All round-8 fixes above (all Minor). After them: check-toy2 (64,125 checks; 169,077 with SEEDS=4000), check-data, check-backend, selfcheck-v21 (clean) and v21-play pass.

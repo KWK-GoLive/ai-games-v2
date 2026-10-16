@@ -90,6 +90,14 @@ A test copy of Part 1 with **lesson and stage 8 "Meaning brain"** (toy model v2:
 - To go back to v2.0 at any time: `VERSION-2.0.md` (GitHub commit 34725ff and the `ai-games-v2.0.zip` snapshot).
 - Tests: `node tests/check-toy2.js` (every toy-v2 key recomputed by a separate implementation over 1500 seeds (SEEDS=4000 for more); guessing rules for every item kind checked (see TEACHING_GUIDE "Design choices"); no overlap between lesson, stage and final data) and `python3 tests/v21-play.py` (lesson 8 and stage 8 at 1100 and 360 px, an official run reaching the llm21 board, the 14-question final, v2.0 unchanged).
 
+## v2.1 preview (`/v21/agent/`, `/v21/agent-final/`): Be the Agent with 4 lessons
+
+Lessons and stages: **1 Which app?** (pick the app only; the chat then shows the right app's result and a good reply), **2 Hidden orders**, **3 Permissions**, **4 Context window** (new: a toy 60-word window; the oldest messages slide out; a new chat starts empty; fixes). The **Agent Arena** is one task in 10 steps that tests all four, plus "check the source" and "check what it really did". Real case 3 now shows the safer Calculator step before the reply.
+
+- Files: `v21/agent/index.html`, `v21/agent/agent21.css`, `v21/agent/js/` (copies of `agent/js/` items, phones, draw, lessons, stages and arena with the changes, plus `window.js`, the context-window lesson data and items); `v21/agent-final/`. The unchanged engine, tools, data and café files load from `../../agent/`.
+- Game IDs `agent21` (4 stages) and `agentfinal21`; `apps-script/Code.gs` accepts them.
+- Tests: `node tests/check-agent21.js` (an independent context-window counter recomputes every key; guessing rules; no shared chats between lesson, stage and Arena; stage 1 scores the app only; the Arena's 10 steps and numbers) and `python3 tests/agent21-play.py` (all 4 lessons, stages and the Arena by clicking at 1100 and 390 px; the greyed messages and cut line; the case-3 order; v2.0 pages still load). `tests/teacher-mode.py` also covers the two preview pages.
+
 ## Teacher mode
 
 Every game page has a **🎓 Teacher** button in the top bar. The code (KWK-TEACH; only its SHA-256 is in `shared/arena.js`) turns on teacher mode in that browser (`localStorage` key `aig-teacher`) until "Leave teacher mode": a menu of every lesson and stage, paused timers, a "Show answer" button on every question (`item.solve()` for the agent items, `item.key` otherwise), and no traffic to the scoreboard (teacher runs are never saved as official or practice runs and never tick the front page). Not real security: it only keeps students from stumbling into it. `tests/teacher-mode.py` checks all 5 pages.
@@ -124,6 +132,7 @@ Load (not measured with a real class): each student sends one small request per 
 ## Sources
 
 - v2.1 toy model v2 sources (Vaswani et al., 2017; Olsson et al., 2022; Khandelwal et al., 2020; Lewis et al., 2020): see TEACHING_GUIDE.md, "Sources used in the games", and `literature-report-v21.xlsx`.
+- v2.1 Be the Agent lesson 4 sources (Liu et al., 2024; Anthropic *Context windows*; Claude Help Center on memory): see TEACHING_GUIDE.md and `literature-report-agent21.xlsx`.
 - Brown, T. B., et al. (2020). *Language Models are Few-Shot Learners*. NeurIPS 2020, section 2.1: "All models use a context window of n_ctx = 2048 tokens."
 - Anthropic, *Context windows* (Claude Platform Docs), https://platform.claude.com/docs/en/build-with-claude/context-windows, accessed 28 Sep 2026. It lists Claude Sonnet 5 among the models with a 1M-token context window.
 - Thailand Revenue Department, *Value Added Tax (VAT)* (https://www.rd.go.th/english/6043.html), accessed 28 Sep 2026: "Currently, the rate is 7 percent." This is the only real page in the Agent game's mini-web; the other 16 pages are made up (their sites end in `.example`).

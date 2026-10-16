@@ -93,9 +93,38 @@ The preview is at `/v21/` (https://kwk-golive.github.io/ai-games-v2/v21/). v2.0 
 - *Blocked* (each right at most 40%, or 62% for the two-option add-on question): chat position, the odd one out, the plain count of shared words, round numbers and "nearest X%" for every X, rough estimates such as "points × 2.5", the place of the right % among the options, the place or length of copy options, the word before "and" or the full stop, and the sentence form of add-on requests (question vs command, length).
 - *Accepted, because they are the idea being taught:* in *which chat* questions, picking the chat that shares the question's important (topic) word is usually right without adding up the points; that is exactly lesson 8's point (a rare, important word counts more than many common ones). In add-on questions, words about time ("today", "tomorrow", "now") usually mean a lookup is needed and writing verbs ("write", "make") usually mean it isn't; that is the concept too (new or live information needs a lookup). Both have counterexamples in the data (*Write a summary of today's top news story* needs a lookup; *Write a poem about tomorrow* doesn't).
 - The final's question 13 is always a *which chat* question: the final's own chats give too few different % answers for a fair % question, so the % skill is tested in stage 8 only.
-- Students who replay stage 8 several times can start to recognise its % questions (about 10 different right answers); this is inherent to a small question pool.
+- Students who replay stage 8 several times can start to recognise its % questions (about 7 different right answers); this is inherent to a small question pool.
 
 **Time (estimates, not measured):** lesson 8 about 8–10 minutes; stage 8 about 6–8 minutes (its class time limits add up to about 6½ minutes, plus reading the feedback); the final gains about 3–4 minutes.
+
+## v2.1 preview: Be the Agent with 4 lessons (Which app?, Hidden orders, Permissions, Context window)
+
+The preview is at `/v21/agent/` (main game, game ID `agent21`, 4 stages) and `/v21/agent-final/` (Agent Arena, `agentfinal21`). Its board is `v21/board.html?class=CODE` (tabs *Be the Agent Arena v2.1* and *Agent Arena v2.1*). The live 7-lesson Be the Agent stays the class version until you switch.
+
+**What changed from v2.0.**
+- Lessons 2–5 (File search, Web search, Calculator, File maker) and their stages are gone. Students now only choose the app: stage 1 is one tap per question (full marks for the right app), and the chat then shows what that app sends back and a good reply. Lesson 1's summary keeps two habits from the removed lessons: *check what the tools really did* (case 1) and *check the source* (case 3).
+- Real case 3 (VAT): the dashed "safer agent" Calculator step now comes **before** the reply, where it should happen, with a note that the real agent skipped it and worked the sum out itself. The reply is still the real one.
+- Hidden orders and Permissions are unchanged (now lessons and stages 2 and 3).
+- **New lesson and stage 4, the context window.** Lesson 1 calls it "keyhole (context window)" once, with a pointer to Be the LLM lesson 4; after that it is "context window".
+- **The Agent Arena** is one task in 10 steps: choose the app (4 times), check the source, spot the hidden order in the supplier letter, open the file before saying "done", find why the memo said "Dear owner" (Ploy's first message slid out of the context window), ask before emailing, and the final reply.
+
+**The toy context window (lesson and stage 4).** The window holds 60 words. Count from the newest message up; a message is inside only if it fits completely; older messages have slid out (greyed in the Model phone; Ploy's phone still shows them). A new chat starts empty. The stage has 6 timed items, 2 of each kind:
+- *What can the model still see?* Tap the oldest message still inside.
+- *Why did it go wrong?* Each chat ends with Ploy's request and the model's wrong reply (❌), with the fact the reply needed. Causes: the fact slid out / was never said / was in another chat (a fourth option, "an app sent wrong information", is never right here).
+- *Best fix:* say it again (one fact, needed now) / a new chat that starts with a short summary (a long, messy chat) / saved notes (needed in every chat).
+
+**Answer key.** The stage chats' oldest visible messages are messages 3, 4, 5, 2, 1 and 6 (`tests/check-agent21.js` recomputes them with a separate counter). In the Arena (step 8) the window is shown as it was when the memo was written (step 6): the smallest multiple of 10 words that holds everything except Ploy's first message (210 words; the chat then had 257), so only that message is greyed and the memo missed "Khun Somsak".
+
+**What to say about it (honestly).**
+- Real models count tokens, not words, and their windows are far bigger: Anthropic's documentation lists several Claude models with "a 1M-token context window" (Anthropic, *Context windows*, accessed 16 Oct 2026; vendor documentation). Everything counts towards it: "the system prompt, every message in messages (including tool results, images, and documents)". This is why an agent that reads long files and web pages fills its window faster than a plain chat.
+- What happens when it is full differs by app. Anthropic's documentation says chat interfaces "can also manage the context window on a rolling "first in, first out" basis" (our toy rule), and also describes *compaction*, which "automatically summarizes earlier parts of the conversation". Either way, details from early in a long chat can be lost.
+- A bigger window isn't perfect. Liu et al. (2024, TACL, Abstract) found that "performance is often highest when relevant information occurs at the beginning or end of the input context, and significantly degrades when models must access relevant information in the middle of long contexts, even for explicitly long-context models". The documentation calls the general effect "context rot": "As token count grows, accuracy and recall degrade". This is why the lesson says to keep important facts short and repeat them.
+- "Memory" is an app feature, not the model remembering. Claude's help page describes memory as turning Claude "from a stateless chat interface" into one that builds context over time: Claude will "summarize your conversations" into a synthesis that "provides context for every new standalone conversation" (Claude Help Center, accessed 16 Oct 2026; vendor documentation). Other apps work differently; I cannot verify every product's design, so the lesson only says that memory works by putting saved notes or summaries back into a new chat.
+- The 60-word window, the whole-message rule and the chats are our own teaching choices, not a published method.
+
+**Design choices to know about (shortcuts we tested).** `tests/check-agent21.js` checks that "always the first / second / middle / last message", "the longest / shortest message" and similar rules are right at most 40% of the time for *What can the model still see?*. The six stage chats have six different answers. For *Why did it go wrong?*, the rule "a 'New chat' note means another chat; a chat over 60 words means it slid out; otherwise it was never said" is right about 87% of the time. This is accepted because it *is* the lesson's counting; one long chat in which the missing fact was never said breaks it. The two "why" items in a run always have different causes, and so do the two "fix" items.
+
+**Time (estimates, not measured):** lesson 1 about 12–15 minutes, stage 1 about 3 minutes; lessons/stages 2 and 3 as in v2.0 (about 8–10 minutes each with their stage); lesson 4 about 8–10 minutes, stage 4 about 6 minutes; the Agent Arena about 10–15 minutes.
 
 ## Sources used in the games
 
@@ -106,6 +135,9 @@ The preview is at `/v21/` (https://kwk-golive.github.io/ai-games-v2/v21/). v2.0 
 - Olsson, C., et al. (2022). *In-context Learning and Induction Heads*. Transformer Circuits Thread (Anthropic), https://transformer-circuits.pub/2022/in-context-learning-and-induction-heads/index.html, section "Induction Heads", accessed 1 Oct 2026. Not peer-reviewed.
 - Khandelwal, U., et al. (2020). *Generalization through Memorization: Nearest Neighbor Language Models*. ICLR 2020. arXiv:1911.00172 (ar5iv), Abstract, accessed 1 Oct 2026.
 - Lewis, P., et al. (2020). *Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks*. NeurIPS 2020. arXiv:2005.11401 (ar5iv), Abstract and §1, accessed 1 Oct 2026.
+- Liu, N. F., et al. (2024). *Lost in the Middle: How Language Models Use Long Contexts*. Transactions of the Association for Computational Linguistics, 12, 157–173. https://doi.org/10.1162/tacl_a_00638. Abstract read on the ACL Anthology page (https://aclanthology.org/2024.tacl-1.9/), accessed 16 Oct 2026 (the PDF could not be opened from the session; only the abstract is quoted).
+- Anthropic, *Context windows*, Claude Platform Docs, https://platform.claude.com/docs/en/build-with-claude/context-windows, accessed 16 Oct 2026 (v2.1 Be the Agent lesson 4). Vendor documentation.
+- Anthropic, *Use Claude's chat search and memory to build on previous context*, Claude Help Center, https://support.claude.com/en/articles/11817273-use-claude-s-chat-search-and-memory-to-build-on-previous-context, accessed 16 Oct 2026. Vendor documentation.
 - The four agent recordings: our own runs of a Claude agent (claude-sonnet-5) on 28 Sep 2026; single runs, not a measurement of how often agents behave this way.
 
 ## Before class
