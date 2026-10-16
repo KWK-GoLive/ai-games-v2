@@ -1,7 +1,7 @@
 /*
- * AI games v2.1 PREVIEW — scoreboard for the preview games llm21 (8 stages) and llmfinal21 only (v21/board.html). Tabs: Be the LLM Arena v2.1
- * (Part A / Part B views) and the v2.1 final. Reads the Google Sheet through the Apps Script web app; refreshes every few seconds.
- * URL options: ?class=SEC1  &game=llm21|llmfinal21  &part=A|B  &projector=1 (big text)
+ * AI games v2.1 PREVIEW — scoreboard for the preview games llm21 (8 stages), llmfinal21, agent21 (4 stages, no parts) and agentfinal21 only
+ * (v21/board.html). Tabs: Be the LLM Arena v2.1 (Part A / Part B views), the v2.1 final, Be the Agent v2.1 and the Agent Arena v2.1. Reads the Google Sheet through the Apps Script web app; refreshes every few seconds.
+ * URL options: ?class=SEC1  &game=llm21|llmfinal21|agent21|agentfinal21  &part=A|B  &projector=1 (big text)
  */
 (function () {
   "use strict";
@@ -10,7 +10,7 @@
   var app = document.getElementById("app");
   var updated = document.getElementById("updated");
   var params = new URLSearchParams(location.search);
-  var GAMES = [{ id: "llm21", name: "Be the LLM Arena v2.1" }, { id: "llmfinal21", name: "LLM final v2.1" }];
+  var GAMES = [{ id: "llm21", name: "Be the LLM Arena v2.1" }, { id: "llmfinal21", name: "LLM final v2.1" }, { id: "agent21", name: "Be the Agent Arena v2.1" }, { id: "agentfinal21", name: "Agent Arena v2.1" }];
   var HAS_PARTS = { llm21: true };
   var game = GAMES.some(function (g) { return g.id === params.get("game"); }) ? params.get("game") : "llm21";
   var PARTS = { A: [0, 1, 2, 3], B: [4, 5, 6, 7] };   // Be the LLM Arena v2.1: stages 1-4 and 5-8
@@ -21,8 +21,8 @@
     warmup: ["What comes next?"],
     llm21: ["Count it", "Greedy writer", "Temperature", "Keyhole", "Two-word boss", "Three-word boss", "Chat brain", "Meaning brain"],
     llmfinal21: ["All skills"],
-    agent2: ["Which app?", "File search", "Web search", "Calculator", "File maker", "Hidden orders", "Permissions"],
-    agentfinal: ["Ploy's memo"]
+    agent21: ["Which app?", "Hidden orders", "Permissions", "Context window"],
+    agentfinal21: ["Ploy's memo"]
   };
   if (params.get("projector") === "1") document.documentElement.classList.add("projector");
 
